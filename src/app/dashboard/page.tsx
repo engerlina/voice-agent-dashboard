@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { api, User, VoiceStatus } from "@/lib/api";
 
 export default function DashboardPage() {
@@ -102,6 +103,12 @@ export default function DashboardPage() {
             </div>
             <div className="flex items-center gap-4">
               <span className="text-gray-600">{user?.email}</span>
+              <Link
+                href="/settings"
+                className="text-gray-600 hover:text-gray-900 font-medium"
+              >
+                Settings
+              </Link>
               <button
                 onClick={handleLogout}
                 className="text-gray-600 hover:text-gray-900 font-medium"

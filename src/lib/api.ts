@@ -21,6 +21,50 @@ export interface VoiceStatus {
   llm_configured: boolean;
 }
 
+export interface Settings {
+  llm_provider: string;
+  llm_model: string;
+  openai_api_key_set: boolean;
+  anthropic_api_key_set: boolean;
+  stt_provider: string;
+  deepgram_api_key_set: boolean;
+  tts_provider: string;
+  elevenlabs_api_key_set: boolean;
+  elevenlabs_voice_id: string;
+  livekit_url: string | null;
+  livekit_configured: boolean;
+  system_prompt: string | null;
+  welcome_message: string;
+  max_conversation_turns: number;
+  rag_enabled: boolean;
+  call_recording_enabled: boolean;
+}
+
+export interface SettingsUpdate {
+  llm_provider?: string;
+  llm_model?: string;
+  openai_api_key?: string;
+  anthropic_api_key?: string;
+  stt_provider?: string;
+  deepgram_api_key?: string;
+  tts_provider?: string;
+  elevenlabs_api_key?: string;
+  elevenlabs_voice_id?: string;
+  livekit_url?: string;
+  livekit_api_key?: string;
+  livekit_api_secret?: string;
+  system_prompt?: string;
+  welcome_message?: string;
+  max_conversation_turns?: number;
+  rag_enabled?: boolean;
+  call_recording_enabled?: boolean;
+}
+
+export interface AvailableModels {
+  openai: string[];
+  anthropic: string[];
+}
+
 class ApiClient {
   private token: string | null = null;
 
@@ -124,6 +168,22 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify({ query, top_k: topK }),
     });
+  }
+
+  // Settings
+  async getSettings(): Promise<Settings> {
+    return this.fetch('/api/v1/settings');
+  }
+
+  async updateSettings(settings: SettingsUpdate): Promise<Settings> {
+    return this.fetch('/api/v1/settings', {
+      method: 'PUT',
+      body: JSON.stringify(settings),
+    });
+  }
+
+  async getAvailableModels(): Promise<AvailableModels> {
+    return this.fetch('/api/v1/settings/models');
   }
 }
 
