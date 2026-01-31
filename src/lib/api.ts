@@ -107,8 +107,11 @@ export interface AdminPhoneNumber {
   created_at: string;
 }
 
+export type SelectedRole = 'admin' | 'user';
+
 class ApiClient {
   private token: string | null = null;
+  private selectedRole: SelectedRole | null = null;
 
   setToken(token: string) {
     this.token = token;
@@ -127,9 +130,37 @@ class ApiClient {
 
   clearToken() {
     this.token = null;
+    this.selectedRole = null;
     if (typeof window !== 'undefined') {
       localStorage.removeItem('token');
+      localStorage.removeItem('selectedRole');
     }
+  }
+
+  setSelectedRole(role: SelectedRole) {
+    this.selectedRole = role;
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('selectedRole', role);
+    }
+  }
+
+  getSelectedRole(): SelectedRole | null {
+    if (this.selectedRole) return this.selectedRole;
+    if (typeof window !== 'undefined') {
+      this.selectedRole = localStorage.getItem('selectedRole') as SelectedRole | null;
+    }
+    return this.selectedRole;
+  }
+
+  clearSelectedRole() {
+    this.selectedRole = null;
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('selectedRole');
+    }
+  }
+
+  isActingAsAdmin(): boolean {
+    return this.getSelectedRole() === 'admin';
   }
 
   private async fetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {

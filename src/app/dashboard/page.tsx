@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { api, User, VoiceStatus, MyPhoneNumber, AvailablePhoneNumber } from "@/lib/api";
+import { api, User, VoiceStatus, MyPhoneNumber, AvailablePhoneNumber, SelectedRole } from "@/lib/api";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -12,6 +12,8 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"overview" | "documents" | "calls">("overview");
   const [isAdmin, setIsAdmin] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<SelectedRole | null>(null);
+  const [showRoleSwitcher, setShowRoleSwitcher] = useState(false);
 
   // Phone number state
   const [myPhoneNumber, setMyPhoneNumber] = useState<MyPhoneNumber | null>(null);
@@ -42,10 +44,20 @@ export default function DashboardPage() {
         setVoiceStatus(statusData);
         setMyPhoneNumber(phoneData);
 
+        // Get the selected role from storage
+        const storedRole = api.getSelectedRole();
+        setSelectedRole(storedRole);
+
         // Check if user is admin
         try {
           const adminCheck = await api.checkAdmin();
           setIsAdmin(adminCheck.is_admin);
+
+          // If no role is selected but user is admin, default to admin
+          if (!storedRole && adminCheck.is_admin) {
+            api.setSelectedRole('admin');
+            setSelectedRole('admin');
+          }
         } catch {
           // Not admin or endpoint not available
         }
@@ -106,6 +118,12 @@ export default function DashboardPage() {
     router.push("/login");
   };
 
+  const handleSwitchRole = (role: SelectedRole) => {
+    api.setSelectedRole(role);
+    setSelectedRole(role);
+    setShowRoleSwitcher(false);
+  };
+
   const handleAddDocument = async (e: React.FormEvent) => {
     e.preventDefault();
     setDocLoading(true);
@@ -162,6 +180,73 @@ export default function DashboardPage() {
             <div className="flex items-center gap-4">
               <span className="text-gray-600">{user?.email}</span>
               {isAdmin && (
+                <div className="relative">
+                  <button
+                    onClick={() => setShowRoleSwitcher(!showRoleSwitcher)}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition ${
+                      selectedRole === 'admin'
+                        ? 'bg-orange-100 text-orange-700 hover:bg-orange-200'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {selectedRole === 'admin' ? (
+                      <>
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                        Admin
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        User
+                      </>
+                    )}
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {showRoleSwitcher && (
+                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border py-1 z-50">
+                      <button
+                        onClick={() => handleSwitchRole('admin')}
+                        className={`w-full flex items-center gap-2 px-4 py-2 text-sm text-left hover:bg-gray-50 ${
+                          selectedRole === 'admin' ? 'text-orange-600 bg-orange-50' : 'text-gray-700'
+                        }`}
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                        Admin Mode
+                        {selectedRole === 'admin' && (
+                          <svg className="w-4 h-4 ml-auto text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </button>
+                      <button
+                        onClick={() => handleSwitchRole('user')}
+                        className={`w-full flex items-center gap-2 px-4 py-2 text-sm text-left hover:bg-gray-50 ${
+                          selectedRole === 'user' ? 'text-primary-600 bg-primary-50' : 'text-gray-700'
+                        }`}
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        User Mode
+                        {selectedRole === 'user' && (
+                          <svg className="w-4 h-4 ml-auto text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+              {isAdmin && selectedRole === 'admin' && (
                 <Link
                   href="/admin"
                   className="text-orange-600 hover:text-orange-700 font-medium"

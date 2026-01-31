@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { api, AdminStats, AdminUser, AdminPhoneNumber } from "@/lib/api";
+import { api, AdminStats, AdminUser, AdminPhoneNumber, SelectedRole } from "@/lib/api";
 
 export default function AdminPage() {
   const router = useRouter();
@@ -23,6 +23,9 @@ export default function AdminPage() {
   const [newNumberName, setNewNumberName] = useState("");
   const [addingNumber, setAddingNumber] = useState(false);
 
+  // Role switcher
+  const [showRoleSwitcher, setShowRoleSwitcher] = useState(false);
+
   useEffect(() => {
     const checkAccess = async () => {
       try {
@@ -31,6 +34,15 @@ export default function AdminPage() {
           router.push("/dashboard");
           return;
         }
+
+        // Check if user has selected admin role
+        const selectedRole = api.getSelectedRole();
+        if (selectedRole !== 'admin') {
+          // Admin user but not acting as admin, redirect to dashboard
+          router.push("/dashboard");
+          return;
+        }
+
         setIsAdmin(true);
         await loadData();
       } catch (err) {
@@ -109,6 +121,15 @@ export default function AdminPage() {
     }
   };
 
+  const handleSwitchRole = (role: SelectedRole) => {
+    api.setSelectedRole(role);
+    setShowRoleSwitcher(false);
+    if (role === 'user') {
+      // If switching to user mode, redirect to dashboard
+      router.push("/dashboard");
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-900">
@@ -134,12 +155,54 @@ export default function AdminPage() {
             </div>
             <h1 className="text-xl font-bold">Admin Dashboard</h1>
           </div>
-          <Link
-            href="/dashboard"
-            className="text-gray-400 hover:text-white text-sm"
-          >
-            Back to Dashboard
-          </Link>
+          <div className="flex items-center gap-4">
+            {/* Role Switcher */}
+            <div className="relative">
+              <button
+                onClick={() => setShowRoleSwitcher(!showRoleSwitcher)}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium bg-orange-500/20 text-orange-400 hover:bg-orange-500/30 transition"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+                Admin Mode
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {showRoleSwitcher && (
+                <div className="absolute right-0 mt-2 w-48 bg-gray-700 rounded-lg shadow-lg border border-gray-600 py-1 z-50">
+                  <button
+                    onClick={() => handleSwitchRole('admin')}
+                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-left text-orange-400 bg-orange-500/10 hover:bg-orange-500/20"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                    Admin Mode
+                    <svg className="w-4 h-4 ml-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => handleSwitchRole('user')}
+                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-left text-gray-300 hover:bg-gray-600"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    User Mode
+                  </button>
+                </div>
+              )}
+            </div>
+            <Link
+              href="/dashboard"
+              className="text-gray-400 hover:text-white text-sm"
+            >
+              Back to Dashboard
+            </Link>
+          </div>
         </div>
       </header>
 
