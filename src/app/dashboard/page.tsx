@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { api, User, VoiceStatus } from "@/lib/api";
+import { api, User, VoiceStatus, MyPhoneNumber, AvailablePhoneNumber } from "@/lib/api";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -11,6 +11,12 @@ export default function DashboardPage() {
   const [voiceStatus, setVoiceStatus] = useState<VoiceStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"overview" | "documents" | "calls">("overview");
+
+  // Phone number state
+  const [myPhoneNumber, setMyPhoneNumber] = useState<MyPhoneNumber | null>(null);
+  const [availableNumbers, setAvailableNumbers] = useState<AvailablePhoneNumber[]>([]);
+  const [phoneLoading, setPhoneLoading] = useState(false);
+  const [showNumberPicker, setShowNumberPicker] = useState(false);
 
   // Document state
   const [docName, setDocName] = useState("");
@@ -26,12 +32,14 @@ export default function DashboardPage() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [userData, statusData] = await Promise.all([
+        const [userData, statusData, phoneData] = await Promise.all([
           api.getMe(),
           api.getVoiceStatus(),
+          api.getMyPhoneNumber(),
         ]);
         setUser(userData);
         setVoiceStatus(statusData);
+        setMyPhoneNumber(phoneData);
       } catch (err) {
         api.clearToken();
         router.push("/login");
@@ -42,6 +50,47 @@ export default function DashboardPage() {
 
     loadData();
   }, [router]);
+
+  const loadAvailableNumbers = async () => {
+    setPhoneLoading(true);
+    try {
+      const numbers = await api.getAvailablePhoneNumbers();
+      setAvailableNumbers(numbers);
+      setShowNumberPicker(true);
+    } catch (err) {
+      console.error("Failed to load numbers", err);
+    } finally {
+      setPhoneLoading(false);
+    }
+  };
+
+  const handleClaimNumber = async (numberId: string) => {
+    setPhoneLoading(true);
+    try {
+      const claimed = await api.claimPhoneNumber(numberId);
+      setMyPhoneNumber(claimed);
+      setShowNumberPicker(false);
+    } catch (err) {
+      console.error("Failed to claim number", err);
+    } finally {
+      setPhoneLoading(false);
+    }
+  };
+
+  const handleReleaseNumber = async () => {
+    if (!confirm("Are you sure you want to release this phone number? Callers will no longer be able to reach your agent.")) {
+      return;
+    }
+    setPhoneLoading(true);
+    try {
+      await api.releasePhoneNumber();
+      setMyPhoneNumber(null);
+    } catch (err) {
+      console.error("Failed to release number", err);
+    } finally {
+      setPhoneLoading(false);
+    }
+  };
 
   const handleLogout = () => {
     api.clearToken();
@@ -141,29 +190,91 @@ export default function DashboardPage() {
         {/* Overview Tab */}
         {activeTab === "overview" && (
           <div className="space-y-6">
-            {/* Phone Number - Prominent Display */}
-            <div className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-xl shadow-lg p-6 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-primary-100 text-sm font-medium">Your Voice Agent Phone Number</p>
-                  {voiceStatus?.phone_number ? (
-                    <p className="text-3xl font-bold mt-1">{voiceStatus.phone_number}</p>
-                  ) : (
-                    <p className="text-xl font-medium mt-1 text-primary-200">Not configured</p>
-                  )}
-                  <p className="text-primary-100 text-sm mt-2">
-                    {voiceStatus?.telephony_configured
-                      ? "Callers can reach your AI agent at this number"
-                      : "Contact support to set up your phone number"}
-                  </p>
-                </div>
-                <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
-                  <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                  </svg>
+            {/* Phone Number Section */}
+            {myPhoneNumber ? (
+              <div className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-xl shadow-lg p-6 text-white">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-primary-100 text-sm font-medium">Your Voice Agent Phone Number</p>
+                    <p className="text-3xl font-bold mt-1">{myPhoneNumber.number}</p>
+                    <p className="text-primary-100 text-sm mt-2">
+                      {myPhoneNumber.webhook_configured
+                        ? "Callers can reach your AI agent at this number"
+                        : "Setting up webhooks..."}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <button
+                      onClick={handleReleaseNumber}
+                      disabled={phoneLoading}
+                      className="text-sm text-primary-200 hover:text-white underline"
+                    >
+                      Change Number
+                    </button>
+                    <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
+                      <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                      </svg>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : showNumberPicker ? (
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold text-gray-900">Select a Phone Number</h2>
+                  <button
+                    onClick={() => setShowNumberPicker(false)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                {availableNumbers.length === 0 ? (
+                  <p className="text-gray-500">No phone numbers available. Contact support to add more.</p>
+                ) : (
+                  <div className="grid gap-3">
+                    {availableNumbers.map((number) => (
+                      <button
+                        key={number.id}
+                        onClick={() => handleClaimNumber(number.id)}
+                        disabled={phoneLoading}
+                        className="flex items-center justify-between p-4 border-2 border-gray-200 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition disabled:opacity-50"
+                      >
+                        <div className="text-left">
+                          <p className="text-lg font-semibold text-gray-900">{number.number}</p>
+                          <p className="text-sm text-gray-500">
+                            {number.country} {number.voice_enabled && "• Voice"} {number.sms_enabled && "• SMS"}
+                          </p>
+                        </div>
+                        <span className="text-primary-600 font-medium">Select</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="bg-gradient-to-r from-gray-700 to-gray-800 rounded-xl shadow-lg p-6 text-white">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-300 text-sm font-medium">Your Voice Agent Phone Number</p>
+                    <p className="text-xl font-medium mt-1 text-gray-400">No number selected</p>
+                    <p className="text-gray-400 text-sm mt-2">
+                      Select a phone number to start receiving calls
+                    </p>
+                  </div>
+                  <button
+                    onClick={loadAvailableNumbers}
+                    disabled={phoneLoading}
+                    className="px-6 py-3 bg-white text-gray-900 rounded-lg font-medium hover:bg-gray-100 transition disabled:opacity-50"
+                  >
+                    {phoneLoading ? "Loading..." : "Choose Number"}
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Status Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

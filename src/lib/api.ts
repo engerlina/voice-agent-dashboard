@@ -51,6 +51,26 @@ export interface AvailableModels {
   anthropic: string[];
 }
 
+export interface AvailablePhoneNumber {
+  id: string;
+  number: string;
+  friendly_name: string | null;
+  country: string;
+  voice_enabled: boolean;
+  sms_enabled: boolean;
+  is_available: boolean;
+  is_mine: boolean;
+}
+
+export interface MyPhoneNumber {
+  id: string;
+  number: string;
+  friendly_name: string | null;
+  country: string;
+  assigned_at: string;
+  webhook_configured: boolean;
+}
+
 class ApiClient {
   private token: string | null = null;
 
@@ -170,6 +190,28 @@ class ApiClient {
 
   async getAvailableModels(): Promise<AvailableModels> {
     return this.fetch('/api/v1/settings/models');
+  }
+
+  // Phone Numbers
+  async getAvailablePhoneNumbers(): Promise<AvailablePhoneNumber[]> {
+    return this.fetch('/api/v1/phone-numbers/available');
+  }
+
+  async getMyPhoneNumber(): Promise<MyPhoneNumber | null> {
+    return this.fetch('/api/v1/phone-numbers/mine');
+  }
+
+  async claimPhoneNumber(phoneNumberId: string): Promise<MyPhoneNumber> {
+    return this.fetch('/api/v1/phone-numbers/claim', {
+      method: 'POST',
+      body: JSON.stringify({ phone_number_id: phoneNumberId }),
+    });
+  }
+
+  async releasePhoneNumber(): Promise<void> {
+    return this.fetch('/api/v1/phone-numbers/release', {
+      method: 'POST',
+    });
   }
 }
 
