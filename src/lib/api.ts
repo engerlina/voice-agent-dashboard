@@ -71,6 +71,42 @@ export interface MyPhoneNumber {
   webhook_configured: boolean;
 }
 
+// Admin types
+export interface AdminStats {
+  total_users: number;
+  active_users: number;
+  total_phone_numbers: number;
+  assigned_phone_numbers: number;
+  available_phone_numbers: number;
+}
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  full_name: string | null;
+  tenant_name: string | null;
+  is_active: boolean;
+  is_admin: boolean;
+  created_at: string;
+  phone_number: string | null;
+}
+
+export interface AdminPhoneNumber {
+  id: string;
+  number: string;
+  twilio_sid: string | null;
+  friendly_name: string | null;
+  country: string;
+  voice_enabled: boolean;
+  sms_enabled: boolean;
+  is_active: boolean;
+  user_id: string | null;
+  user_email: string | null;
+  assigned_at: string | null;
+  webhook_configured: boolean;
+  created_at: string;
+}
+
 class ApiClient {
   private token: string | null = null;
 
@@ -210,6 +246,54 @@ class ApiClient {
 
   async releasePhoneNumber(): Promise<void> {
     return this.fetch('/api/v1/phone-numbers/release', {
+      method: 'POST',
+    });
+  }
+
+  // Admin
+  async checkAdmin(): Promise<{ is_admin: boolean; email: string }> {
+    return this.fetch('/api/v1/admin/check');
+  }
+
+  async getAdminStats(): Promise<AdminStats> {
+    return this.fetch('/api/v1/admin/stats');
+  }
+
+  async getAdminUsers(): Promise<AdminUser[]> {
+    return this.fetch('/api/v1/admin/users');
+  }
+
+  async updateUser(userId: string, updates: { is_active?: boolean; is_admin?: boolean }): Promise<void> {
+    return this.fetch(`/api/v1/admin/users/${userId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    });
+  }
+
+  async getAdminPhoneNumbers(): Promise<AdminPhoneNumber[]> {
+    return this.fetch('/api/v1/admin/phone-numbers');
+  }
+
+  async addPhoneNumber(data: {
+    number: string;
+    twilio_sid?: string;
+    friendly_name?: string;
+    country?: string;
+  }): Promise<AdminPhoneNumber> {
+    return this.fetch('/api/v1/admin/phone-numbers', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deletePhoneNumber(numberId: string): Promise<void> {
+    return this.fetch(`/api/v1/admin/phone-numbers/${numberId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async unassignPhoneNumber(numberId: string): Promise<void> {
+    return this.fetch(`/api/v1/admin/phone-numbers/${numberId}/unassign`, {
       method: 'POST',
     });
   }

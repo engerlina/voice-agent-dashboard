@@ -11,6 +11,7 @@ export default function DashboardPage() {
   const [voiceStatus, setVoiceStatus] = useState<VoiceStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"overview" | "documents" | "calls">("overview");
+  const [isAdmin, setIsAdmin] = useState(false);
 
   // Phone number state
   const [myPhoneNumber, setMyPhoneNumber] = useState<MyPhoneNumber | null>(null);
@@ -40,6 +41,14 @@ export default function DashboardPage() {
         setUser(userData);
         setVoiceStatus(statusData);
         setMyPhoneNumber(phoneData);
+
+        // Check if user is admin
+        try {
+          const adminCheck = await api.checkAdmin();
+          setIsAdmin(adminCheck.is_admin);
+        } catch {
+          // Not admin or endpoint not available
+        }
       } catch (err) {
         api.clearToken();
         router.push("/login");
@@ -152,6 +161,14 @@ export default function DashboardPage() {
             </div>
             <div className="flex items-center gap-4">
               <span className="text-gray-600">{user?.email}</span>
+              {isAdmin && (
+                <Link
+                  href="/admin"
+                  className="text-orange-600 hover:text-orange-700 font-medium"
+                >
+                  Admin
+                </Link>
+              )}
               <Link
                 href="/settings"
                 className="text-gray-600 hover:text-gray-900 font-medium"
