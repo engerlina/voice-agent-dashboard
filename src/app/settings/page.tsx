@@ -14,15 +14,6 @@ export default function SettingsPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  // Form state for API keys (since we only show if they're set, not the actual value)
-  const [openaiKey, setOpenaiKey] = useState("");
-  const [anthropicKey, setAnthropicKey] = useState("");
-  const [deepgramKey, setDeepgramKey] = useState("");
-  const [elevenlabsKey, setElevenlabsKey] = useState("");
-  const [livekitUrl, setLivekitUrl] = useState("");
-  const [livekitApiKey, setLivekitApiKey] = useState("");
-  const [livekitApiSecret, setLivekitApiSecret] = useState("");
-
   useEffect(() => {
     const token = api.getToken();
     if (!token) {
@@ -34,7 +25,6 @@ export default function SettingsPage() {
       .then(([settingsData, modelsData]) => {
         setSettings(settingsData);
         setModels(modelsData);
-        setLivekitUrl(settingsData.livekit_url || "");
       })
       .catch((err) => {
         if (err.message.includes("credentials")) {
@@ -55,14 +45,8 @@ export default function SettingsPage() {
     try {
       const updatedSettings = await api.updateSettings(updates);
       setSettings(updatedSettings);
-      setSuccess("Settings saved successfully!");
-      // Clear API key inputs after save
-      setOpenaiKey("");
-      setAnthropicKey("");
-      setDeepgramKey("");
-      setElevenlabsKey("");
-      setLivekitApiKey("");
-      setLivekitApiSecret("");
+      setSuccess("Settings saved!");
+      setTimeout(() => setSuccess(""), 2000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save settings");
     } finally {
@@ -118,24 +102,101 @@ export default function SettingsPage() {
           </div>
         )}
 
-        {/* LLM Configuration */}
+        {/* Agent Behavior - Top Priority */}
         <section className="bg-white rounded-xl shadow-sm p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">AI Model Configuration</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Agent Behavior</h2>
+          <p className="text-sm text-gray-500 mb-4">Configure how your voice agent interacts with callers.</p>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                System Prompt
+              </label>
+              <p className="text-xs text-gray-500 mb-2">
+                Define the agent's personality, knowledge, and instructions. This is the core prompt that shapes all responses.
+              </p>
+              <textarea
+                value={settings?.system_prompt || ""}
+                onChange={(e) => handleSave({ system_prompt: e.target.value })}
+                placeholder="You are a helpful customer service agent for [Company Name]. You help customers with questions about products, orders, and general inquiries. Be friendly, professional, and concise."
+                rows={6}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent font-mono text-sm"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Welcome Message
+              </label>
+              <p className="text-xs text-gray-500 mb-2">
+                The first message the agent says when a call connects.
+              </p>
+              <input
+                type="text"
+                value={settings?.welcome_message || ""}
+                onChange={(e) => handleSave({ welcome_message: e.target.value })}
+                placeholder="Hello! Thanks for calling. How can I help you today?"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Max Conversation Turns
+              </label>
+              <p className="text-xs text-gray-500 mb-2">
+                Maximum back-and-forth exchanges before the agent ends the call.
+              </p>
+              <input
+                type="number"
+                value={settings?.max_conversation_turns || 50}
+                onChange={(e) => handleSave({ max_conversation_turns: parseInt(e.target.value) })}
+                min={5}
+                max={200}
+                className="w-32 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* AI Model Selection */}
+        <section className="bg-white rounded-xl shadow-sm p-6 mb-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">AI Model</h2>
+          <p className="text-sm text-gray-500 mb-4">Choose which AI model powers your voice agent.</p>
 
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 LLM Provider
               </label>
-              <select
-                value={settings?.llm_provider || "openai"}
-                onChange={(e) => handleSave({ llm_provider: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                disabled={saving}
-              >
-                <option value="openai">OpenAI</option>
-                <option value="anthropic">Anthropic</option>
-              </select>
+              <div className="flex gap-4">
+                <label className={`flex-1 flex items-center justify-center gap-2 p-4 border-2 rounded-lg cursor-pointer transition ${
+                  settings?.llm_provider === "openai" ? "border-primary-500 bg-primary-50" : "border-gray-200 hover:border-gray-300"
+                }`}>
+                  <input
+                    type="radio"
+                    name="llm_provider"
+                    value="openai"
+                    checked={settings?.llm_provider === "openai"}
+                    onChange={(e) => handleSave({ llm_provider: e.target.value, llm_model: "gpt-4-turbo-preview" })}
+                    className="sr-only"
+                  />
+                  <span className="font-medium">OpenAI</span>
+                </label>
+                <label className={`flex-1 flex items-center justify-center gap-2 p-4 border-2 rounded-lg cursor-pointer transition ${
+                  settings?.llm_provider === "anthropic" ? "border-primary-500 bg-primary-50" : "border-gray-200 hover:border-gray-300"
+                }`}>
+                  <input
+                    type="radio"
+                    name="llm_provider"
+                    value="anthropic"
+                    checked={settings?.llm_provider === "anthropic"}
+                    onChange={(e) => handleSave({ llm_provider: e.target.value, llm_model: "claude-3-sonnet-20240229" })}
+                    className="sr-only"
+                  />
+                  <span className="font-medium">Anthropic</span>
+                </label>
+              </div>
             </div>
 
             <div>
@@ -158,268 +219,34 @@ export default function SettingsPage() {
                   ))
                 )}
               </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                OpenAI API Key {settings?.openai_api_key_set && <span className="text-green-600">(Set)</span>}
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="password"
-                  value={openaiKey}
-                  onChange={(e) => setOpenaiKey(e.target.value)}
-                  placeholder={settings?.openai_api_key_set ? "••••••••" : "sk-..."}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                />
-                <button
-                  onClick={() => openaiKey && handleSave({ openai_api_key: openaiKey })}
-                  disabled={!openaiKey || saving}
-                  className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50"
-                >
-                  Save
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Anthropic API Key {settings?.anthropic_api_key_set && <span className="text-green-600">(Set)</span>}
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="password"
-                  value={anthropicKey}
-                  onChange={(e) => setAnthropicKey(e.target.value)}
-                  placeholder={settings?.anthropic_api_key_set ? "••••••••" : "sk-ant-..."}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                />
-                <button
-                  onClick={() => anthropicKey && handleSave({ anthropic_api_key: anthropicKey })}
-                  disabled={!anthropicKey || saving}
-                  className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50"
-                >
-                  Save
-                </button>
-              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                {settings?.llm_provider === "anthropic"
+                  ? "Claude 3 Opus is most capable, Sonnet is balanced, Haiku is fastest."
+                  : "GPT-4 Turbo is recommended for best quality. GPT-3.5 is faster but less capable."}
+              </p>
             </div>
           </div>
         </section>
 
-        {/* Voice Configuration */}
+        {/* Voice Settings */}
         <section className="bg-white rounded-xl shadow-sm p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Voice Configuration</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Voice Settings</h2>
+          <p className="text-sm text-gray-500 mb-4">Configure the voice used for text-to-speech.</p>
 
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Speech-to-Text Provider
-              </label>
-              <select
-                value={settings?.stt_provider || "deepgram"}
-                onChange={(e) => handleSave({ stt_provider: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                disabled={saving}
-              >
-                <option value="deepgram">Deepgram</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Deepgram API Key {settings?.deepgram_api_key_set && <span className="text-green-600">(Set)</span>}
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="password"
-                  value={deepgramKey}
-                  onChange={(e) => setDeepgramKey(e.target.value)}
-                  placeholder={settings?.deepgram_api_key_set ? "••••••••" : "Enter API key"}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                />
-                <button
-                  onClick={() => deepgramKey && handleSave({ deepgram_api_key: deepgramKey })}
-                  disabled={!deepgramKey || saving}
-                  className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50"
-                >
-                  Save
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Text-to-Speech Provider
-              </label>
-              <select
-                value={settings?.tts_provider || "elevenlabs"}
-                onChange={(e) => handleSave({ tts_provider: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                disabled={saving}
-              >
-                <option value="elevenlabs">ElevenLabs</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                ElevenLabs API Key {settings?.elevenlabs_api_key_set && <span className="text-green-600">(Set)</span>}
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="password"
-                  value={elevenlabsKey}
-                  onChange={(e) => setElevenlabsKey(e.target.value)}
-                  placeholder={settings?.elevenlabs_api_key_set ? "••••••••" : "Enter API key"}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                />
-                <button
-                  onClick={() => elevenlabsKey && handleSave({ elevenlabs_api_key: elevenlabsKey })}
-                  disabled={!elevenlabsKey || saving}
-                  className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50"
-                >
-                  Save
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                ElevenLabs Voice ID
-              </label>
-              <input
-                type="text"
-                value={settings?.elevenlabs_voice_id || ""}
-                onChange={(e) => handleSave({ elevenlabs_voice_id: e.target.value })}
-                placeholder="21m00Tcm4TlvDq8ikWAM"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              />
-            </div>
-          </div>
-        </section>
-
-        {/* LiveKit Configuration */}
-        <section className="bg-white rounded-xl shadow-sm p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            LiveKit Configuration
-            {settings?.livekit_configured && (
-              <span className="ml-2 text-sm font-normal text-green-600">(Configured)</span>
-            )}
-          </h2>
-
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                LiveKit URL
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={livekitUrl}
-                  onChange={(e) => setLivekitUrl(e.target.value)}
-                  placeholder="wss://your-project.livekit.cloud"
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                />
-                <button
-                  onClick={() => livekitUrl && handleSave({ livekit_url: livekitUrl })}
-                  disabled={!livekitUrl || saving}
-                  className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50"
-                >
-                  Save
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                LiveKit API Key
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="password"
-                  value={livekitApiKey}
-                  onChange={(e) => setLivekitApiKey(e.target.value)}
-                  placeholder="API..."
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                />
-                <button
-                  onClick={() => livekitApiKey && handleSave({ livekit_api_key: livekitApiKey })}
-                  disabled={!livekitApiKey || saving}
-                  className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50"
-                >
-                  Save
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                LiveKit API Secret
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="password"
-                  value={livekitApiSecret}
-                  onChange={(e) => setLivekitApiSecret(e.target.value)}
-                  placeholder="Enter secret"
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                />
-                <button
-                  onClick={() => livekitApiSecret && handleSave({ livekit_api_secret: livekitApiSecret })}
-                  disabled={!livekitApiSecret || saving}
-                  className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50"
-                >
-                  Save
-                </button>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Agent Behavior */}
-        <section className="bg-white rounded-xl shadow-sm p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Agent Behavior</h2>
-
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                System Prompt
-              </label>
-              <textarea
-                value={settings?.system_prompt || ""}
-                onChange={(e) => handleSave({ system_prompt: e.target.value })}
-                placeholder="You are a helpful voice assistant..."
-                rows={4}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Welcome Message
-              </label>
-              <input
-                type="text"
-                value={settings?.welcome_message || ""}
-                onChange={(e) => handleSave({ welcome_message: e.target.value })}
-                placeholder="Hello! How can I help you today?"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Max Conversation Turns
-              </label>
-              <input
-                type="number"
-                value={settings?.max_conversation_turns || 50}
-                onChange={(e) => handleSave({ max_conversation_turns: parseInt(e.target.value) })}
-                min={1}
-                max={200}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              />
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              ElevenLabs Voice ID
+            </label>
+            <input
+              type="text"
+              value={settings?.elevenlabs_voice_id || ""}
+              onChange={(e) => handleSave({ elevenlabs_voice_id: e.target.value })}
+              placeholder="21m00Tcm4TlvDq8ikWAM"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            />
+            <p className="text-xs text-gray-500 mt-2">
+              Find voice IDs at <a href="https://elevenlabs.io/voice-library" target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">ElevenLabs Voice Library</a>
+            </p>
           </div>
         </section>
 
@@ -428,8 +255,11 @@ export default function SettingsPage() {
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Features</h2>
 
           <div className="space-y-4">
-            <label className="flex items-center justify-between">
-              <span className="text-gray-700">Enable RAG (Document Search)</span>
+            <label className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div>
+                <span className="font-medium text-gray-900">RAG (Document Search)</span>
+                <p className="text-sm text-gray-500">Let the agent search your knowledge base to answer questions.</p>
+              </div>
               <button
                 onClick={() => handleSave({ rag_enabled: !settings?.rag_enabled })}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
@@ -444,8 +274,11 @@ export default function SettingsPage() {
               </button>
             </label>
 
-            <label className="flex items-center justify-between">
-              <span className="text-gray-700">Enable Call Recording</span>
+            <label className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div>
+                <span className="font-medium text-gray-900">Call Recording</span>
+                <p className="text-sm text-gray-500">Record calls for quality assurance and training.</p>
+              </div>
               <button
                 onClick={() => handleSave({ call_recording_enabled: !settings?.call_recording_enabled })}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${

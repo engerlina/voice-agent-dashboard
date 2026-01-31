@@ -24,15 +24,7 @@ export interface VoiceStatus {
 export interface Settings {
   llm_provider: string;
   llm_model: string;
-  openai_api_key_set: boolean;
-  anthropic_api_key_set: boolean;
-  stt_provider: string;
-  deepgram_api_key_set: boolean;
-  tts_provider: string;
-  elevenlabs_api_key_set: boolean;
   elevenlabs_voice_id: string;
-  livekit_url: string | null;
-  livekit_configured: boolean;
   system_prompt: string | null;
   welcome_message: string;
   max_conversation_turns: number;
@@ -43,16 +35,7 @@ export interface Settings {
 export interface SettingsUpdate {
   llm_provider?: string;
   llm_model?: string;
-  openai_api_key?: string;
-  anthropic_api_key?: string;
-  stt_provider?: string;
-  deepgram_api_key?: string;
-  tts_provider?: string;
-  elevenlabs_api_key?: string;
   elevenlabs_voice_id?: string;
-  livekit_url?: string;
-  livekit_api_key?: string;
-  livekit_api_secret?: string;
   system_prompt?: string;
   welcome_message?: string;
   max_conversation_turns?: number;
