@@ -19,6 +19,9 @@ export interface VoiceStatus {
   stt_configured: boolean;
   tts_configured: boolean;
   llm_configured: boolean;
+  telephony_configured: boolean;
+  phone_number: string | null;
+  phone_number_masked: string | null;
 }
 
 export interface Settings {

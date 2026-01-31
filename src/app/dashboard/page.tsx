@@ -141,6 +141,30 @@ export default function DashboardPage() {
         {/* Overview Tab */}
         {activeTab === "overview" && (
           <div className="space-y-6">
+            {/* Phone Number - Prominent Display */}
+            <div className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-xl shadow-lg p-6 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-primary-100 text-sm font-medium">Your Voice Agent Phone Number</p>
+                  {voiceStatus?.phone_number ? (
+                    <p className="text-3xl font-bold mt-1">{voiceStatus.phone_number}</p>
+                  ) : (
+                    <p className="text-xl font-medium mt-1 text-primary-200">Not configured</p>
+                  )}
+                  <p className="text-primary-100 text-sm mt-2">
+                    {voiceStatus?.telephony_configured
+                      ? "Callers can reach your AI agent at this number"
+                      : "Contact support to set up your phone number"}
+                  </p>
+                </div>
+                <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
+                  <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+
             {/* Status Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <StatusCard
@@ -169,10 +193,60 @@ export default function DashboardPage() {
               />
             </div>
 
-            {/* User Info */}
+            {/* Quick Actions */}
             <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Account Information</h2>
-              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <Link
+                  href="/settings"
+                  className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition"
+                >
+                  <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
+                    <svg className="w-5 h-5 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">Configure Agent</p>
+                    <p className="text-sm text-gray-500">Set prompts & model</p>
+                  </div>
+                </Link>
+                <button
+                  onClick={() => setActiveTab("documents")}
+                  className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition text-left"
+                >
+                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">Add Knowledge</p>
+                    <p className="text-sm text-gray-500">Upload documents</p>
+                  </div>
+                </button>
+                <button
+                  onClick={() => setActiveTab("calls")}
+                  className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition text-left"
+                >
+                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                    <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">View Calls</p>
+                    <p className="text-sm text-gray-500">Call history</p>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            {/* Account Info */}
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Account</h2>
+              <dl className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <dt className="text-sm text-gray-500">Email</dt>
                   <dd className="text-gray-900 font-medium">{user?.email}</dd>
@@ -183,7 +257,7 @@ export default function DashboardPage() {
                 </div>
                 <div>
                   <dt className="text-sm text-gray-500">Status</dt>
-                  <dd className="text-gray-900 font-medium">
+                  <dd>
                     <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${user?.is_active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
                       {user?.is_active ? "Active" : "Inactive"}
                     </span>
