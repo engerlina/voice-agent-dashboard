@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { api, AdminStats, AdminUser, AdminPhoneNumber } from "@/lib/api";
+import { api, AdminStats, AdminUser, AdminPhoneNumber, TwilioAvailableNumber } from "@/lib/api";
 
 export default function AdminPage() {
   const router = useRouter();
@@ -22,6 +22,13 @@ export default function AdminPage() {
 
   // Search/filter
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Twilio number search
+  const [twilioCountry, setTwilioCountry] = useState("US");
+  const [twilioAreaCode, setTwilioAreaCode] = useState("");
+  const [twilioNumbers, setTwilioNumbers] = useState<TwilioAvailableNumber[]>([]);
+  const [twilioSearching, setTwilioSearching] = useState(false);
+  const [buyingNumber, setBuyingNumber] = useState<string | null>(null);
 
   useEffect(() => {
     const checkAccess = async () => {
@@ -112,6 +119,37 @@ export default function AdminPage() {
       await loadData();
     } catch (err) {
       console.error("Failed to unassign number", err);
+    }
+  };
+
+  const handleSearchTwilio = async () => {
+    setTwilioSearching(true);
+    setTwilioNumbers([]);
+    try {
+      const numbers = await api.searchTwilioNumbers(
+        twilioCountry,
+        twilioAreaCode || undefined
+      );
+      setTwilioNumbers(numbers);
+    } catch (err: any) {
+      alert(err.message || "Failed to search numbers");
+    } finally {
+      setTwilioSearching(false);
+    }
+  };
+
+  const handleBuyNumber = async (phoneNumber: string) => {
+    if (!confirm(`Buy ${phoneNumber}? This will charge your Twilio account.`)) return;
+    setBuyingNumber(phoneNumber);
+    try {
+      await api.buyTwilioNumber(phoneNumber);
+      setTwilioNumbers(nums => nums.filter(n => n.phone_number !== phoneNumber));
+      await loadData();
+      alert(`Successfully purchased ${phoneNumber}!`);
+    } catch (err: any) {
+      alert(err.message || "Failed to purchase number");
+    } finally {
+      setBuyingNumber(null);
     }
   };
 
@@ -236,8 +274,63 @@ export default function AdminPage() {
         {/* Phone Numbers Tab */}
         {activeTab === "numbers" && (
           <div className="space-y-6">
-            {/* Add Number - Simple inline form */}
+            {/* Buy from Twilio */}
             <div className="bg-gray-800 rounded-xl p-4">
+              <h3 className="text-sm font-medium text-gray-400 mb-3">Buy from Twilio</h3>
+              <div className="flex gap-3 mb-4">
+                <select
+                  value={twilioCountry}
+                  onChange={(e) => setTwilioCountry(e.target.value)}
+                  className="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-orange-500 focus:outline-none"
+                >
+                  <option value="US">United States</option>
+                  <option value="CA">Canada</option>
+                  <option value="GB">United Kingdom</option>
+                  <option value="AU">Australia</option>
+                </select>
+                <input
+                  type="text"
+                  value={twilioAreaCode}
+                  onChange={(e) => setTwilioAreaCode(e.target.value)}
+                  placeholder="Area code (optional)"
+                  className="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:border-orange-500 focus:outline-none"
+                />
+                <button
+                  onClick={handleSearchTwilio}
+                  disabled={twilioSearching}
+                  className="px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition disabled:opacity-50"
+                >
+                  {twilioSearching ? "Searching..." : "Search"}
+                </button>
+              </div>
+
+              {/* Twilio Results */}
+              {twilioNumbers.length > 0 && (
+                <div className="grid gap-2 max-h-64 overflow-y-auto">
+                  {twilioNumbers.map((num) => (
+                    <div key={num.phone_number} className="bg-gray-700 rounded-lg p-3 flex items-center justify-between">
+                      <div>
+                        <p className="text-white font-mono">{num.phone_number}</p>
+                        <p className="text-sm text-gray-400">
+                          {num.locality && `${num.locality}, `}{num.region}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleBuyNumber(num.phone_number)}
+                        disabled={buyingNumber === num.phone_number}
+                        className="px-4 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition disabled:opacity-50"
+                      >
+                        {buyingNumber === num.phone_number ? "Buying..." : "Buy"}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Or add manually */}
+            <div className="bg-gray-800 rounded-xl p-4">
+              <h3 className="text-sm font-medium text-gray-400 mb-3">Or add existing number</h3>
               <form onSubmit={handleAddNumber} className="flex gap-3">
                 <input
                   type="text"
@@ -249,20 +342,20 @@ export default function AdminPage() {
                 <button
                   type="submit"
                   disabled={addingNumber || !newNumber.trim()}
-                  className="px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition disabled:opacity-50"
+                  className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-500 transition disabled:opacity-50"
                 >
                   {addingNumber ? "Adding..." : "Add"}
                 </button>
               </form>
             </div>
 
-            {/* Search */}
+            {/* Search existing numbers */}
             <div className="relative">
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search numbers, names, or users..."
+                placeholder="Search your numbers..."
                 className="w-full px-4 py-3 pl-10 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-orange-500 focus:outline-none"
               />
               <svg className="absolute left-3 top-3.5 w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">

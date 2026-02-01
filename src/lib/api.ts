@@ -107,6 +107,19 @@ export interface AdminPhoneNumber {
   created_at: string;
 }
 
+export interface TwilioAvailableNumber {
+  phone_number: string;
+  friendly_name: string;
+  locality: string | null;
+  region: string | null;
+  country: string;
+  capabilities: {
+    voice: boolean;
+    sms: boolean;
+    mms: boolean;
+  };
+}
+
 class ApiClient {
   private token: string | null = null;
 
@@ -295,6 +308,21 @@ class ApiClient {
   async unassignPhoneNumber(numberId: string): Promise<void> {
     return this.fetch(`/api/v1/admin/phone-numbers/${numberId}/unassign`, {
       method: 'POST',
+    });
+  }
+
+  // Twilio number search & purchase
+  async searchTwilioNumbers(country: string = 'US', areaCode?: string, contains?: string): Promise<TwilioAvailableNumber[]> {
+    const params = new URLSearchParams({ country });
+    if (areaCode) params.append('area_code', areaCode);
+    if (contains) params.append('contains', contains);
+    return this.fetch(`/api/v1/admin/twilio/available?${params.toString()}`);
+  }
+
+  async buyTwilioNumber(phoneNumber: string): Promise<{ message: string; number: string; sid: string }> {
+    return this.fetch('/api/v1/admin/twilio/buy', {
+      method: 'POST',
+      body: JSON.stringify({ phone_number: phoneNumber }),
     });
   }
 }
