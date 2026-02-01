@@ -26,6 +26,7 @@ export default function AdminPage() {
   // Twilio number search
   const [twilioCountry, setTwilioCountry] = useState("US");
   const [twilioAreaCode, setTwilioAreaCode] = useState("");
+  const [twilioNumberType, setTwilioNumberType] = useState("local");
   const [twilioNumbers, setTwilioNumbers] = useState<TwilioAvailableNumber[]>([]);
   const [twilioSearching, setTwilioSearching] = useState(false);
   const [buyingNumber, setBuyingNumber] = useState<string | null>(null);
@@ -128,11 +129,12 @@ export default function AdminPage() {
     try {
       const numbers = await api.searchTwilioNumbers(
         twilioCountry,
-        twilioAreaCode || undefined
+        twilioAreaCode || undefined,
+        twilioNumberType
       );
       setTwilioNumbers(numbers);
     } catch (err: any) {
-      alert(err.message || "Failed to search numbers");
+      alert(err.message || "Failed to search numbers. Check Twilio credentials.");
     } finally {
       setTwilioSearching(false);
     }
@@ -277,7 +279,7 @@ export default function AdminPage() {
             {/* Buy from Twilio */}
             <div className="bg-gray-800 rounded-xl p-4">
               <h3 className="text-sm font-medium text-gray-400 mb-3">Buy from Twilio</h3>
-              <div className="flex gap-3 mb-4">
+              <div className="flex gap-3 mb-4 flex-wrap">
                 <select
                   value={twilioCountry}
                   onChange={(e) => setTwilioCountry(e.target.value)}
@@ -288,12 +290,21 @@ export default function AdminPage() {
                   <option value="GB">United Kingdom</option>
                   <option value="AU">Australia</option>
                 </select>
+                <select
+                  value={twilioNumberType}
+                  onChange={(e) => setTwilioNumberType(e.target.value)}
+                  className="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-orange-500 focus:outline-none"
+                >
+                  <option value="local">Local</option>
+                  <option value="mobile">Mobile</option>
+                  <option value="toll_free">Toll-Free</option>
+                </select>
                 <input
                   type="text"
                   value={twilioAreaCode}
                   onChange={(e) => setTwilioAreaCode(e.target.value)}
                   placeholder="Area code (optional)"
-                  className="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:border-orange-500 focus:outline-none"
+                  className="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:border-orange-500 focus:outline-none min-w-[120px]"
                 />
                 <button
                   onClick={handleSearchTwilio}

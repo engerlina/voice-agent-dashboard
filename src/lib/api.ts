@@ -312,10 +312,9 @@ class ApiClient {
   }
 
   // Twilio number search & purchase
-  async searchTwilioNumbers(country: string = 'US', areaCode?: string, contains?: string): Promise<TwilioAvailableNumber[]> {
-    const params = new URLSearchParams({ country });
+  async searchTwilioNumbers(country: string = 'US', areaCode?: string, numberType: string = 'local'): Promise<TwilioAvailableNumber[]> {
+    const params = new URLSearchParams({ country, number_type: numberType });
     if (areaCode) params.append('area_code', areaCode);
-    if (contains) params.append('contains', contains);
     return this.fetch(`/api/v1/admin/twilio/available?${params.toString()}`);
   }
 
