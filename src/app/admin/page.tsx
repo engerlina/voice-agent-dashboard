@@ -17,11 +17,11 @@ export default function AdminPage() {
   const [phoneNumbers, setPhoneNumbers] = useState<AdminPhoneNumber[]>([]);
 
   // Add number form
-  const [showAddNumber, setShowAddNumber] = useState(false);
   const [newNumber, setNewNumber] = useState("");
-  const [newNumberSid, setNewNumberSid] = useState("");
-  const [newNumberName, setNewNumberName] = useState("");
   const [addingNumber, setAddingNumber] = useState(false);
+
+  // Search/filter
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     const checkAccess = async () => {
@@ -69,17 +69,13 @@ export default function AdminPage() {
 
   const handleAddNumber = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!newNumber.trim()) return;
     setAddingNumber(true);
     try {
       await api.addPhoneNumber({
-        number: newNumber,
-        twilio_sid: newNumberSid || undefined,
-        friendly_name: newNumberName || undefined,
+        number: newNumber.trim(),
       });
       setNewNumber("");
-      setNewNumberSid("");
-      setNewNumberName("");
-      setShowAddNumber(false);
       await loadData();
     } catch (err) {
       console.error("Failed to add number", err);
@@ -88,6 +84,16 @@ export default function AdminPage() {
       setAddingNumber(false);
     }
   };
+
+  // Filter phone numbers based on search
+  const filteredNumbers = phoneNumbers.filter(num =>
+    num.number.includes(searchQuery) ||
+    (num.friendly_name?.toLowerCase().includes(searchQuery.toLowerCase())) ||
+    (num.user_email?.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
+  const availableNumbers = filteredNumbers.filter(n => !n.user_id);
+  const assignedNumbers = filteredNumbers.filter(n => n.user_id);
 
   const handleDeleteNumber = async (numberId: string) => {
     if (!confirm("Are you sure you want to delete this phone number?")) return;
@@ -229,147 +235,110 @@ export default function AdminPage() {
 
         {/* Phone Numbers Tab */}
         {activeTab === "numbers" && (
-          <div>
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-lg font-semibold">Phone Number Pool</h2>
-              <button
-                onClick={() => setShowAddNumber(true)}
-                className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition"
-              >
-                Add Number
-              </button>
+          <div className="space-y-6">
+            {/* Add Number - Simple inline form */}
+            <div className="bg-gray-800 rounded-xl p-4">
+              <form onSubmit={handleAddNumber} className="flex gap-3">
+                <input
+                  type="text"
+                  value={newNumber}
+                  onChange={(e) => setNewNumber(e.target.value)}
+                  placeholder="Add number (+14155551234)"
+                  className="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:border-orange-500 focus:outline-none"
+                />
+                <button
+                  type="submit"
+                  disabled={addingNumber || !newNumber.trim()}
+                  className="px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition disabled:opacity-50"
+                >
+                  {addingNumber ? "Adding..." : "Add"}
+                </button>
+              </form>
             </div>
 
-            {/* Add Number Modal */}
-            {showAddNumber && (
-              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                <div className="bg-gray-800 rounded-xl p-6 w-full max-w-md">
-                  <h3 className="text-lg font-semibold mb-4">Add Phone Number</h3>
-                  <form onSubmit={handleAddNumber} className="space-y-4">
-                    <div>
-                      <label className="block text-sm text-gray-400 mb-1">Phone Number (E.164)</label>
-                      <input
-                        type="text"
-                        value={newNumber}
-                        onChange={(e) => setNewNumber(e.target.value)}
-                        placeholder="+14155551234"
-                        required
-                        className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:border-orange-500 focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm text-gray-400 mb-1">Twilio SID (optional)</label>
-                      <input
-                        type="text"
-                        value={newNumberSid}
-                        onChange={(e) => setNewNumberSid(e.target.value)}
-                        placeholder="PNxxxxxxxxxxxxxxxx"
-                        className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:border-orange-500 focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm text-gray-400 mb-1">Friendly Name (optional)</label>
-                      <input
-                        type="text"
-                        value={newNumberName}
-                        onChange={(e) => setNewNumberName(e.target.value)}
-                        placeholder="San Francisco"
-                        className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:border-orange-500 focus:outline-none"
-                      />
-                    </div>
-                    <div className="flex gap-3 pt-2">
+            {/* Search */}
+            <div className="relative">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search numbers, names, or users..."
+                className="w-full px-4 py-3 pl-10 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-orange-500 focus:outline-none"
+              />
+              <svg className="absolute left-3 top-3.5 w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+
+            {/* Available Numbers */}
+            <div>
+              <h3 className="text-sm font-medium text-gray-400 mb-3">
+                Available ({availableNumbers.length})
+              </h3>
+              {availableNumbers.length === 0 ? (
+                <div className="bg-gray-800 rounded-xl p-6 text-center text-gray-500">
+                  No available numbers. Add one above.
+                </div>
+              ) : (
+                <div className="grid gap-2">
+                  {availableNumbers.map((number) => (
+                    <div key={number.id} className="bg-gray-800 rounded-lg p-4 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center">
+                          <svg className="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="text-white font-mono">{number.number}</p>
+                          {number.friendly_name && (
+                            <p className="text-sm text-gray-500">{number.friendly_name}</p>
+                          )}
+                        </div>
+                      </div>
                       <button
-                        type="button"
-                        onClick={() => setShowAddNumber(false)}
-                        className="flex-1 px-4 py-2 border border-gray-600 rounded-lg hover:bg-gray-700 transition"
+                        onClick={() => handleDeleteNumber(number.id)}
+                        className="text-sm text-red-400 hover:text-red-300 px-3 py-1"
                       >
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        disabled={addingNumber}
-                        className="flex-1 px-4 py-2 bg-orange-500 rounded-lg hover:bg-orange-600 transition disabled:opacity-50"
-                      >
-                        {addingNumber ? "Adding..." : "Add Number"}
+                        Delete
                       </button>
                     </div>
-                  </form>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Assigned Numbers */}
+            {assignedNumbers.length > 0 && (
+              <div>
+                <h3 className="text-sm font-medium text-gray-400 mb-3">
+                  Assigned ({assignedNumbers.length})
+                </h3>
+                <div className="grid gap-2">
+                  {assignedNumbers.map((number) => (
+                    <div key={number.id} className="bg-gray-800 rounded-lg p-4 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                          <svg className="w-5 h-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="text-white font-mono">{number.number}</p>
+                          <p className="text-sm text-gray-400">{number.user_email}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleUnassignNumber(number.id)}
+                        className="text-sm text-yellow-400 hover:text-yellow-300 px-3 py-1"
+                      >
+                        Unassign
+                      </button>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
-
-            <div className="bg-gray-800 rounded-xl overflow-hidden">
-              <table className="w-full">
-                <thead className="bg-gray-700">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-300">Number</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-300">Name</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-300">Assigned To</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-300">Status</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-300">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-700">
-                  {phoneNumbers.map((number) => (
-                    <tr key={number.id} className="hover:bg-gray-750">
-                      <td className="px-4 py-3">
-                        <p className="text-white font-mono">{number.number}</p>
-                        {number.twilio_sid && (
-                          <p className="text-xs text-gray-500">{number.twilio_sid}</p>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-gray-300">{number.friendly_name || "-"}</td>
-                      <td className="px-4 py-3">
-                        {number.user_email ? (
-                          <div>
-                            <p className="text-white">{number.user_email}</p>
-                            <p className="text-xs text-gray-500">
-                              {number.webhook_configured ? "Webhook ready" : "Setting up..."}
-                            </p>
-                          </div>
-                        ) : (
-                          <span className="text-gray-500">Available</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2 py-1 rounded text-xs ${
-                          number.is_active ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"
-                        }`}>
-                          {number.is_active ? "Active" : "Inactive"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex gap-2">
-                          {number.user_id && (
-                            <button
-                              onClick={() => handleUnassignNumber(number.id)}
-                              className="text-sm text-yellow-400 hover:text-yellow-300"
-                            >
-                              Unassign
-                            </button>
-                          )}
-                          {!number.user_id && (
-                            <button
-                              onClick={() => handleDeleteNumber(number.id)}
-                              className="text-sm text-red-400 hover:text-red-300"
-                            >
-                              Delete
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                  {phoneNumbers.length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
-                        No phone numbers in pool. Click "Add Number" to add one.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
           </div>
         )}
       </main>
