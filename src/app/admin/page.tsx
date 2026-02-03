@@ -24,12 +24,25 @@ export default function AdminPage() {
   const [searchQuery, setSearchQuery] = useState("");
 
   // Twilio number search
-  const [twilioCountry, setTwilioCountry] = useState("US");
+  const [twilioCountry, setTwilioCountry] = useState("AU");
   const [twilioAreaCode, setTwilioAreaCode] = useState("");
-  const [twilioNumberType, setTwilioNumberType] = useState("local");
-  const [twilioNumbers, setTwilioNumbers] = useState<TwilioAvailableNumber[]>([]);
+  const [twilioLocalNumbers, setTwilioLocalNumbers] = useState<TwilioAvailableNumber[]>([]);
+  const [twilioMobileNumbers, setTwilioMobileNumbers] = useState<TwilioAvailableNumber[]>([]);
+  const [twilioTollFreeNumbers, setTwilioTollFreeNumbers] = useState<TwilioAvailableNumber[]>([]);
   const [twilioSearching, setTwilioSearching] = useState(false);
   const [buyingNumber, setBuyingNumber] = useState<string | null>(null);
+  const [fixingWebhook, setFixingWebhook] = useState<string | null>(null);
+
+  // Approximate Twilio prices by country/type
+  const getPriceEstimate = (country: string, type: string) => {
+    const prices: Record<string, Record<string, string>> = {
+      US: { local: "$1.15/mo", mobile: "$1.15/mo", toll_free: "$2.15/mo" },
+      CA: { local: "$1.15/mo", mobile: "$1.15/mo", toll_free: "$2.15/mo" },
+      GB: { local: "$1.15/mo", mobile: "$5.00/mo", toll_free: "$3.00/mo" },
+      AU: { local: "$3.50/mo", mobile: "$6.00/mo", toll_free: "$10.00/mo" },
+    };
+    return prices[country]?.[type] || "$1.00/mo";
+  };
 
   useEffect(() => {
     const checkAccess = async () => {
@@ -123,16 +136,44 @@ export default function AdminPage() {
     }
   };
 
+  const handleFixWebhook = async (numberId: string) => {
+    setFixingWebhook(numberId);
+    try {
+      const result = await api.fixPhoneNumberWebhook(numberId);
+      alert(`Webhook fixed! URL: ${result.webhook_url}`);
+      await loadData();
+    } catch (err: any) {
+      alert(err.message || "Failed to fix webhook");
+    } finally {
+      setFixingWebhook(null);
+    }
+  };
+
   const handleSearchTwilio = async () => {
     setTwilioSearching(true);
-    setTwilioNumbers([]);
+    setTwilioLocalNumbers([]);
+    setTwilioMobileNumbers([]);
+    setTwilioTollFreeNumbers([]);
+
     try {
-      const numbers = await api.searchTwilioNumbers(
-        twilioCountry,
-        twilioAreaCode || undefined,
-        twilioNumberType
-      );
-      setTwilioNumbers(numbers);
+      // Fetch all three number types in parallel
+      const [localNumbers, mobileNumbers, tollFreeNumbers] = await Promise.allSettled([
+        api.searchTwilioNumbers(twilioCountry, twilioAreaCode || undefined, "local"),
+        api.searchTwilioNumbers(twilioCountry, twilioAreaCode || undefined, "mobile"),
+        api.searchTwilioNumbers(twilioCountry, twilioAreaCode || undefined, "toll_free"),
+      ]);
+
+      if (localNumbers.status === "fulfilled") setTwilioLocalNumbers(localNumbers.value);
+      if (mobileNumbers.status === "fulfilled") setTwilioMobileNumbers(mobileNumbers.value);
+      if (tollFreeNumbers.status === "fulfilled") setTwilioTollFreeNumbers(tollFreeNumbers.value);
+
+      // Check if all failed
+      const allFailed = localNumbers.status === "rejected" &&
+                        mobileNumbers.status === "rejected" &&
+                        tollFreeNumbers.status === "rejected";
+      if (allFailed) {
+        throw new Error("No numbers available for this country");
+      }
     } catch (err: any) {
       alert(err.message || "Failed to search numbers. Check Twilio credentials.");
     } finally {
@@ -145,7 +186,10 @@ export default function AdminPage() {
     setBuyingNumber(phoneNumber);
     try {
       await api.buyTwilioNumber(phoneNumber);
-      setTwilioNumbers(nums => nums.filter(n => n.phone_number !== phoneNumber));
+      // Remove from all lists
+      setTwilioLocalNumbers(nums => nums.filter(n => n.phone_number !== phoneNumber));
+      setTwilioMobileNumbers(nums => nums.filter(n => n.phone_number !== phoneNumber));
+      setTwilioTollFreeNumbers(nums => nums.filter(n => n.phone_number !== phoneNumber));
       await loadData();
       alert(`Successfully purchased ${phoneNumber}!`);
     } catch (err: any) {
@@ -285,19 +329,10 @@ export default function AdminPage() {
                   onChange={(e) => setTwilioCountry(e.target.value)}
                   className="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-orange-500 focus:outline-none"
                 >
+                  <option value="AU">Australia</option>
                   <option value="US">United States</option>
                   <option value="CA">Canada</option>
                   <option value="GB">United Kingdom</option>
-                  <option value="AU">Australia</option>
-                </select>
-                <select
-                  value={twilioNumberType}
-                  onChange={(e) => setTwilioNumberType(e.target.value)}
-                  className="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-orange-500 focus:outline-none"
-                >
-                  <option value="local">Local</option>
-                  <option value="mobile">Mobile</option>
-                  <option value="toll_free">Toll-Free</option>
                 </select>
                 <input
                   type="text"
@@ -311,30 +346,99 @@ export default function AdminPage() {
                   disabled={twilioSearching}
                   className="px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition disabled:opacity-50"
                 >
-                  {twilioSearching ? "Searching..." : "Search"}
+                  {twilioSearching ? "Searching..." : "Search All Types"}
                 </button>
               </div>
 
-              {/* Twilio Results */}
-              {twilioNumbers.length > 0 && (
-                <div className="grid gap-2 max-h-64 overflow-y-auto">
-                  {twilioNumbers.map((num) => (
-                    <div key={num.phone_number} className="bg-gray-700 rounded-lg p-3 flex items-center justify-between">
-                      <div>
-                        <p className="text-white font-mono">{num.phone_number}</p>
-                        <p className="text-sm text-gray-400">
-                          {num.locality && `${num.locality}, `}{num.region}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => handleBuyNumber(num.phone_number)}
-                        disabled={buyingNumber === num.phone_number}
-                        className="px-4 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition disabled:opacity-50"
-                      >
-                        {buyingNumber === num.phone_number ? "Buying..." : "Buy"}
-                      </button>
+              {/* Twilio Results - All Types */}
+              {(twilioLocalNumbers.length > 0 || twilioMobileNumbers.length > 0 || twilioTollFreeNumbers.length > 0) && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Local Numbers */}
+                  <div className="bg-gray-700/50 rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-medium text-white">Local</h4>
+                      <span className="text-xs text-green-400">{getPriceEstimate(twilioCountry, "local")}</span>
                     </div>
-                  ))}
+                    {twilioLocalNumbers.length === 0 ? (
+                      <p className="text-sm text-gray-500">Not available</p>
+                    ) : (
+                      <div className="space-y-2 max-h-48 overflow-y-auto">
+                        {twilioLocalNumbers.slice(0, 5).map((num) => (
+                          <div key={num.phone_number} className="bg-gray-700 rounded p-2 flex items-center justify-between">
+                            <div>
+                              <p className="text-white font-mono text-sm">{num.phone_number}</p>
+                              <p className="text-xs text-gray-400">{num.locality || num.region}</p>
+                            </div>
+                            <button
+                              onClick={() => handleBuyNumber(num.phone_number)}
+                              disabled={buyingNumber === num.phone_number}
+                              className="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition disabled:opacity-50"
+                            >
+                              {buyingNumber === num.phone_number ? "..." : "Buy"}
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Mobile Numbers */}
+                  <div className="bg-gray-700/50 rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-medium text-white">Mobile</h4>
+                      <span className="text-xs text-green-400">{getPriceEstimate(twilioCountry, "mobile")}</span>
+                    </div>
+                    {twilioMobileNumbers.length === 0 ? (
+                      <p className="text-sm text-gray-500">Not available</p>
+                    ) : (
+                      <div className="space-y-2 max-h-48 overflow-y-auto">
+                        {twilioMobileNumbers.slice(0, 5).map((num) => (
+                          <div key={num.phone_number} className="bg-gray-700 rounded p-2 flex items-center justify-between">
+                            <div>
+                              <p className="text-white font-mono text-sm">{num.phone_number}</p>
+                              <p className="text-xs text-gray-400">{num.locality || num.region}</p>
+                            </div>
+                            <button
+                              onClick={() => handleBuyNumber(num.phone_number)}
+                              disabled={buyingNumber === num.phone_number}
+                              className="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition disabled:opacity-50"
+                            >
+                              {buyingNumber === num.phone_number ? "..." : "Buy"}
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Toll-Free Numbers */}
+                  <div className="bg-gray-700/50 rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-medium text-white">Toll-Free</h4>
+                      <span className="text-xs text-green-400">{getPriceEstimate(twilioCountry, "toll_free")}</span>
+                    </div>
+                    {twilioTollFreeNumbers.length === 0 ? (
+                      <p className="text-sm text-gray-500">Not available</p>
+                    ) : (
+                      <div className="space-y-2 max-h-48 overflow-y-auto">
+                        {twilioTollFreeNumbers.slice(0, 5).map((num) => (
+                          <div key={num.phone_number} className="bg-gray-700 rounded p-2 flex items-center justify-between">
+                            <div>
+                              <p className="text-white font-mono text-sm">{num.phone_number}</p>
+                              <p className="text-xs text-gray-400">{num.locality || num.region}</p>
+                            </div>
+                            <button
+                              onClick={() => handleBuyNumber(num.phone_number)}
+                              disabled={buyingNumber === num.phone_number}
+                              className="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition disabled:opacity-50"
+                            >
+                              {buyingNumber === num.phone_number ? "..." : "Buy"}
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -432,12 +536,21 @@ export default function AdminPage() {
                           <p className="text-sm text-gray-400">{number.user_email}</p>
                         </div>
                       </div>
-                      <button
-                        onClick={() => handleUnassignNumber(number.id)}
-                        className="text-sm text-yellow-400 hover:text-yellow-300 px-3 py-1"
-                      >
-                        Unassign
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleFixWebhook(number.id)}
+                          disabled={fixingWebhook === number.id}
+                          className="text-sm text-blue-400 hover:text-blue-300 px-3 py-1 disabled:opacity-50"
+                        >
+                          {fixingWebhook === number.id ? "Fixing..." : "Fix Webhook"}
+                        </button>
+                        <button
+                          onClick={() => handleUnassignNumber(number.id)}
+                          className="text-sm text-yellow-400 hover:text-yellow-300 px-3 py-1"
+                        >
+                          Unassign
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>

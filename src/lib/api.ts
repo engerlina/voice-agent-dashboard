@@ -120,6 +120,34 @@ export interface TwilioAvailableNumber {
   };
 }
 
+// Call types
+export interface CallTranscript {
+  speaker: string;
+  text: string;
+  confidence: number | null;
+  start_time_ms: number;
+  end_time_ms: number;
+}
+
+export interface Call {
+  id: string;
+  direction: string;
+  status: string;
+  caller_number: string | null;
+  callee_number: string | null;
+  started_at: string | null;
+  ended_at: string | null;
+  duration_seconds: number | null;
+  agent_response_count: number;
+}
+
+export interface CallDetail extends Call {
+  room_name: string;
+  call_sid: string | null;
+  ended_by: string | null;
+  transcripts: CallTranscript[];
+}
+
 class ApiClient {
   private token: string | null = null;
 
@@ -311,6 +339,12 @@ class ApiClient {
     });
   }
 
+  async fixPhoneNumberWebhook(numberId: string): Promise<{ message: string; webhook_url: string }> {
+    return this.fetch(`/api/v1/admin/phone-numbers/${numberId}/fix-webhook`, {
+      method: 'POST',
+    });
+  }
+
   // Twilio number search & purchase
   async searchTwilioNumbers(country: string = 'US', areaCode?: string, numberType: string = 'local'): Promise<TwilioAvailableNumber[]> {
     const params = new URLSearchParams({ country, number_type: numberType });
@@ -323,6 +357,15 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify({ phone_number: phoneNumber }),
     });
+  }
+
+  // Calls
+  async getCalls(limit: number = 50, offset: number = 0): Promise<Call[]> {
+    return this.fetch(`/api/v1/calls?limit=${limit}&offset=${offset}`);
+  }
+
+  async getCall(callId: string): Promise<CallDetail> {
+    return this.fetch(`/api/v1/calls/${callId}`);
   }
 }
 

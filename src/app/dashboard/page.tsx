@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { api, User, VoiceStatus, MyPhoneNumber, AvailablePhoneNumber } from "@/lib/api";
+import { api, User, VoiceStatus, MyPhoneNumber, AvailablePhoneNumber, Call, CallDetail } from "@/lib/api";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -29,6 +29,12 @@ export default function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
+
+  // Calls state
+  const [calls, setCalls] = useState<Call[]>([]);
+  const [callsLoading, setCallsLoading] = useState(false);
+  const [selectedCall, setSelectedCall] = useState<CallDetail | null>(null);
+  const [callDetailLoading, setCallDetailLoading] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -136,6 +142,37 @@ export default function DashboardPage() {
       setSearchLoading(false);
     }
   };
+
+  const loadCalls = async () => {
+    setCallsLoading(true);
+    try {
+      const callsData = await api.getCalls();
+      setCalls(callsData);
+    } catch (err) {
+      console.error("Failed to load calls", err);
+    } finally {
+      setCallsLoading(false);
+    }
+  };
+
+  const loadCallDetail = async (callId: string) => {
+    setCallDetailLoading(true);
+    try {
+      const callDetail = await api.getCall(callId);
+      setSelectedCall(callDetail);
+    } catch (err) {
+      console.error("Failed to load call detail", err);
+    } finally {
+      setCallDetailLoading(false);
+    }
+  };
+
+  // Load calls when switching to calls tab
+  useEffect(() => {
+    if (activeTab === "calls" && calls.length === 0) {
+      loadCalls();
+    }
+  }, [activeTab]);
 
   if (loading) {
     return (
@@ -479,9 +516,192 @@ export default function DashboardPage() {
 
         {/* Calls Tab */}
         {activeTab === "calls" && (
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Call History</h2>
-            <p className="text-gray-500">No calls yet. Make your first call to see the history here.</p>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Call List */}
+            <div className="lg:col-span-1 bg-white rounded-xl shadow-sm p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-900">Call History</h2>
+                <button
+                  onClick={loadCalls}
+                  disabled={callsLoading}
+                  className="text-sm text-primary-600 hover:text-primary-700"
+                >
+                  {callsLoading ? "Loading..." : "Refresh"}
+                </button>
+              </div>
+
+              {callsLoading && calls.length === 0 ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary-600"></div>
+                </div>
+              ) : calls.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">No calls yet. Make your first call to see the history here.</p>
+              ) : (
+                <div className="space-y-3 max-h-[600px] overflow-y-auto">
+                  {calls.map((call) => (
+                    <button
+                      key={call.id}
+                      onClick={() => loadCallDetail(call.id)}
+                      className={`w-full text-left p-3 rounded-lg border-2 transition ${
+                        selectedCall?.id === call.id
+                          ? "border-primary-500 bg-primary-50"
+                          : "border-gray-200 hover:border-gray-300"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                          call.direction === "inbound"
+                            ? "bg-blue-100 text-blue-700"
+                            : "bg-green-100 text-green-700"
+                        }`}>
+                          {call.direction}
+                        </span>
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                          call.status === "completed"
+                            ? "bg-gray-100 text-gray-700"
+                            : call.status === "in_progress"
+                            ? "bg-yellow-100 text-yellow-700"
+                            : "bg-red-100 text-red-700"
+                        }`}>
+                          {call.status}
+                        </span>
+                      </div>
+                      <p className="font-medium text-gray-900">
+                        {call.caller_number || "Unknown caller"}
+                      </p>
+                      <div className="flex items-center justify-between mt-1 text-sm text-gray-500">
+                        <span>
+                          {call.started_at
+                            ? new Date(call.started_at).toLocaleDateString(undefined, {
+                                month: "short",
+                                day: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit"
+                              })
+                            : "No date"}
+                        </span>
+                        <span>
+                          {call.duration_seconds
+                            ? `${Math.floor(call.duration_seconds / 60)}:${(call.duration_seconds % 60).toString().padStart(2, '0')}`
+                            : "--:--"}
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Call Detail */}
+            <div className="lg:col-span-2 bg-white rounded-xl shadow-sm p-6">
+              {callDetailLoading ? (
+                <div className="flex justify-center py-16">
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary-600"></div>
+                </div>
+              ) : selectedCall ? (
+                <div>
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-lg font-semibold text-gray-900">Call Details</h2>
+                    <button
+                      onClick={() => setSelectedCall(null)}
+                      className="text-gray-400 hover:text-gray-600"
+                    >
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  {/* Call Metadata */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
+                    <div>
+                      <p className="text-xs text-gray-500">Direction</p>
+                      <p className="font-medium text-gray-900 capitalize">{selectedCall.direction}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Status</p>
+                      <p className="font-medium text-gray-900 capitalize">{selectedCall.status}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Duration</p>
+                      <p className="font-medium text-gray-900">
+                        {selectedCall.duration_seconds
+                          ? `${Math.floor(selectedCall.duration_seconds / 60)}:${(selectedCall.duration_seconds % 60).toString().padStart(2, '0')}`
+                          : "N/A"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Ended By</p>
+                      <p className="font-medium text-gray-900 capitalize">{selectedCall.ended_by || "N/A"}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Caller</p>
+                      <p className="font-medium text-gray-900">{selectedCall.caller_number || "Unknown"}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Called</p>
+                      <p className="font-medium text-gray-900">{selectedCall.callee_number || "Unknown"}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Started</p>
+                      <p className="font-medium text-gray-900">
+                        {selectedCall.started_at
+                          ? new Date(selectedCall.started_at).toLocaleString()
+                          : "N/A"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Agent Responses</p>
+                      <p className="font-medium text-gray-900">{selectedCall.agent_response_count}</p>
+                    </div>
+                  </div>
+
+                  {/* Transcript */}
+                  <h3 className="font-medium text-gray-900 mb-3">Transcript</h3>
+                  {selectedCall.transcripts.length === 0 ? (
+                    <p className="text-gray-500 text-center py-8">No transcript available for this call.</p>
+                  ) : (
+                    <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                      {selectedCall.transcripts.map((transcript, index) => (
+                        <div
+                          key={index}
+                          className={`flex ${transcript.speaker === "caller" ? "justify-start" : "justify-end"}`}
+                        >
+                          <div
+                            className={`max-w-[80%] p-3 rounded-lg ${
+                              transcript.speaker === "caller"
+                                ? "bg-gray-100 text-gray-900"
+                                : "bg-primary-600 text-white"
+                            }`}
+                          >
+                            <p className={`text-xs font-medium mb-1 ${
+                              transcript.speaker === "caller" ? "text-gray-500" : "text-primary-100"
+                            }`}>
+                              {transcript.speaker === "caller" ? "Caller" : "Agent"}
+                            </p>
+                            <p>{transcript.text}</p>
+                            {transcript.confidence !== null && (
+                              <p className={`text-xs mt-1 ${
+                                transcript.speaker === "caller" ? "text-gray-400" : "text-primary-200"
+                              }`}>
+                                Confidence: {(transcript.confidence * 100).toFixed(0)}%
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-16 text-gray-500">
+                  <svg className="w-16 h-16 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                  </svg>
+                  <p>Select a call to view details and transcript</p>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </main>
