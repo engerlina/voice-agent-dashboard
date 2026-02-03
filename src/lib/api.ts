@@ -238,16 +238,61 @@ class ApiClient {
     });
   }
 
-  // Documents
+  // Documents (RAG Knowledge Base)
   async createDocument(name: string, content: string, description?: string): Promise<any> {
-    return this.fetch('/api/v1/voice/documents', {
+    return this.fetch('/api/v1/documents', {
       method: 'POST',
       body: JSON.stringify({ name, content, description }),
     });
   }
 
+  async uploadDocument(file: File, description?: string): Promise<any> {
+    const token = this.getToken();
+    const formData = new FormData();
+    formData.append('file', file);
+    if (description) {
+      formData.append('description', description);
+    }
+
+    const response = await fetch(`${API_BASE}/api/v1/documents/upload`, {
+      method: 'POST',
+      headers: {
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: 'Upload failed' }));
+      throw new Error(error.detail || 'Upload failed');
+    }
+
+    return response.json();
+  }
+
+  async importUrl(url: string, name?: string): Promise<any> {
+    return this.fetch('/api/v1/documents/url', {
+      method: 'POST',
+      body: JSON.stringify({ url, name }),
+    });
+  }
+
+  async listDocuments(limit: number = 50, offset: number = 0): Promise<any[]> {
+    return this.fetch(`/api/v1/documents?limit=${limit}&offset=${offset}`);
+  }
+
+  async getDocument(documentId: string): Promise<any> {
+    return this.fetch(`/api/v1/documents/${documentId}`);
+  }
+
+  async deleteDocument(documentId: string): Promise<void> {
+    return this.fetch(`/api/v1/documents/${documentId}`, {
+      method: 'DELETE',
+    });
+  }
+
   async searchDocuments(query: string, topK: number = 5): Promise<any> {
-    return this.fetch('/api/v1/voice/documents/search', {
+    return this.fetch('/api/v1/documents/search', {
       method: 'POST',
       body: JSON.stringify({ query, top_k: topK }),
     });
