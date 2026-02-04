@@ -31,6 +31,9 @@ export interface Settings {
   system_prompt: string | null;
   welcome_message: string;
   max_conversation_turns: number;
+  language: string;
+  auto_detect_language: boolean;
+  min_silence_duration: number;
   rag_enabled: boolean;
   call_recording_enabled: boolean;
 }
@@ -42,6 +45,9 @@ export interface SettingsUpdate {
   system_prompt?: string;
   welcome_message?: string;
   max_conversation_turns?: number;
+  language?: string;
+  auto_detect_language?: boolean;
+  min_silence_duration?: number;
   rag_enabled?: boolean;
   call_recording_enabled?: boolean;
 }
@@ -120,6 +126,22 @@ export interface TwilioAvailableNumber {
   };
 }
 
+// Model management types
+export interface ModelInfo {
+  id: string;
+  name: string;
+  enabled: boolean;
+}
+
+export interface ProviderModels {
+  provider: string;
+  models: ModelInfo[];
+}
+
+export interface AdminModelsResponse {
+  providers: ProviderModels[];
+}
+
 // Call types
 export interface CallTranscript {
   speaker: string;
@@ -139,12 +161,14 @@ export interface Call {
   ended_at: string | null;
   duration_seconds: number | null;
   agent_response_count: number;
+  recording_url: string | null;
 }
 
 export interface CallDetail extends Call {
   room_name: string;
   call_sid: string | null;
   ended_by: string | null;
+  recording_url: string | null;
   transcripts: CallTranscript[];
 }
 
@@ -194,6 +218,11 @@ class ApiClient {
     if (!response.ok) {
       const error = await response.json().catch(() => ({ detail: 'Request failed' }));
       throw new Error(error.detail || 'Request failed');
+    }
+
+    // Handle 204 No Content responses (e.g., DELETE operations)
+    if (response.status === 204) {
+      return null;
     }
 
     return response.json();
@@ -401,6 +430,18 @@ class ApiClient {
     return this.fetch('/api/v1/admin/twilio/buy', {
       method: 'POST',
       body: JSON.stringify({ phone_number: phoneNumber }),
+    });
+  }
+
+  // Model management (admin)
+  async getAdminModels(): Promise<AdminModelsResponse> {
+    return this.fetch('/api/v1/admin/models');
+  }
+
+  async toggleModel(provider: string, modelId: string, enabled: boolean): Promise<{ message: string }> {
+    return this.fetch(`/api/v1/admin/models/${provider}/${encodeURIComponent(modelId)}/toggle`, {
+      method: 'PUT',
+      body: JSON.stringify({ enabled }),
     });
   }
 

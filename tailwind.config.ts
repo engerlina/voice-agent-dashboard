@@ -21,6 +21,19 @@ const config: Config = {
           800: '#075985',
           900: '#0c4a6e',
         },
+        // Brand purple color palette based on #724a9e
+        brand: {
+          50: '#f5f3f7',
+          100: '#ebe7ef',
+          200: '#d4cce0',
+          300: '#b9a8cb',
+          400: '#9a7bb3',
+          500: '#724a9e', // Main brand color
+          600: '#5f3d85',
+          700: '#4d326c',
+          800: '#3d2856',
+          900: '#2e1f42',
+        },
       },
     },
   },

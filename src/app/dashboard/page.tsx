@@ -43,6 +43,7 @@ export default function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [searchPerformed, setSearchPerformed] = useState(false);
 
   // Calls state
   const [calls, setCalls] = useState<Call[]>([]);
@@ -185,12 +186,15 @@ export default function DashboardPage() {
     if (e) e.preventDefault();
     if (!searchQuery.trim()) return;
     setSearchLoading(true);
+    setSearchPerformed(false);
 
     try {
       const results = await api.searchDocuments(searchQuery);
       setSearchResults(results.results || []);
+      setSearchPerformed(true);
     } catch (err) {
       console.error(err);
+      setSearchPerformed(true);
     } finally {
       setSearchLoading(false);
     }
@@ -345,7 +349,7 @@ export default function DashboardPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="flex flex-col items-center gap-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-600"></div>
           <p className="text-slate-500">Loading dashboard...</p>
         </div>
       </div>
@@ -359,7 +363,7 @@ export default function DashboardPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center shadow-sm">
+              <div className="w-9 h-9 bg-gradient-to-br from-brand-500 to-brand-700 rounded-lg flex items-center justify-center shadow-sm">
                 <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                 </svg>
@@ -371,7 +375,7 @@ export default function DashboardPage() {
               {isAdmin && (
                 <Link
                   href="/admin"
-                  className="text-sm text-orange-600 hover:text-orange-700 font-medium"
+                  className="text-sm text-brand-600 hover:text-brand-700 font-medium"
                 >
                   Admin
                 </Link>
@@ -416,14 +420,14 @@ export default function DashboardPage() {
           <div className="space-y-8">
             {/* Phone Number Section */}
             {myPhoneNumber ? (
-              <div className="bg-gradient-to-br from-primary-600 via-primary-700 to-primary-800 rounded-2xl shadow-lg p-8 text-white relative overflow-hidden">
+              <div className="bg-gradient-to-br from-brand-600 via-brand-700 to-brand-800 rounded-2xl shadow-lg p-8 text-white relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2"></div>
                 <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2"></div>
                 <div className="relative flex items-center justify-between">
                   <div>
-                    <p className="text-primary-200 text-sm font-medium uppercase tracking-wide">Your Voice Agent</p>
+                    <p className="text-brand-200 text-sm font-medium uppercase tracking-wide">Your Voice Agent</p>
                     <p className="text-4xl font-bold mt-2 tracking-tight">{myPhoneNumber.number}</p>
-                    <p className="text-primary-200 text-sm mt-3">
+                    <p className="text-brand-200 text-sm mt-3">
                       {myPhoneNumber.webhook_configured
                         ? "Ready to receive calls"
                         : "Configuring webhooks..."}
@@ -433,7 +437,7 @@ export default function DashboardPage() {
                     <button
                       onClick={handleReleaseNumber}
                       disabled={phoneLoading}
-                      className="text-sm text-primary-200 hover:text-white transition"
+                      className="text-sm text-brand-200 hover:text-white transition"
                     >
                       Change Number
                     </button>
@@ -467,7 +471,7 @@ export default function DashboardPage() {
                         key={number.id}
                         onClick={() => handleClaimNumber(number.id)}
                         disabled={phoneLoading}
-                        className="flex items-center justify-between p-4 border-2 border-slate-200 rounded-xl hover:border-primary-500 hover:bg-primary-50 transition disabled:opacity-50"
+                        className="flex items-center justify-between p-4 border-2 border-slate-200 rounded-xl hover:border-brand-500 hover:bg-brand-50 transition disabled:opacity-50"
                       >
                         <div className="text-left">
                           <p className="text-lg font-semibold text-slate-900">{number.number}</p>
@@ -475,7 +479,7 @@ export default function DashboardPage() {
                             {number.country} {number.voice_enabled && "• Voice"} {number.sms_enabled && "• SMS"}
                           </p>
                         </div>
-                        <span className="text-primary-600 font-medium">Select</span>
+                        <span className="text-brand-600 font-medium">Select</span>
                       </button>
                     ))}
                   </div>
@@ -510,10 +514,10 @@ export default function DashboardPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <Link
                     href="/settings"
-                    className="group flex flex-col items-center gap-3 p-5 border border-slate-200 rounded-xl hover:border-primary-300 hover:bg-primary-50/50 transition"
+                    className="group flex flex-col items-center gap-3 p-5 border border-slate-200 rounded-xl hover:border-brand-300 hover:bg-brand-50/50 transition"
                   >
-                    <div className="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center group-hover:bg-primary-200 transition">
-                      <svg className="w-6 h-6 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div className="w-12 h-12 bg-brand-100 rounded-xl flex items-center justify-center group-hover:bg-brand-200 transition">
+                      <svg className="w-6 h-6 text-brand-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                       </svg>
@@ -582,7 +586,7 @@ export default function DashboardPage() {
                 <h2 className="text-base font-semibold text-slate-900">Recent Calls</h2>
                 <button
                   onClick={() => setActiveTab("calls")}
-                  className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+                  className="text-sm text-brand-600 hover:text-brand-700 font-medium"
                 >
                   View all
                 </button>
@@ -653,7 +657,14 @@ export default function DashboardPage() {
                             {formatDate(call.started_at, true)}
                           </td>
                           <td className="py-3 text-sm text-slate-600 text-right font-mono">
-                            {formatDuration(call.duration_seconds)}
+                            <span className="inline-flex items-center gap-2">
+                              {call.recording_url && (
+                                <svg className="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" title="Recording available">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                                </svg>
+                              )}
+                              {formatDuration(call.duration_seconds)}
+                            </span>
                           </td>
                         </tr>
                       ))}
@@ -720,25 +731,34 @@ export default function DashboardPage() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleSearch(e)}
-                    className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+                    className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none"
                     placeholder="Search Knowledge Base..."
                   />
                 </div>
                 <button
                   onClick={handleSearch}
                   disabled={searchLoading || !searchQuery.trim()}
-                  className="px-4 py-2.5 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 disabled:opacity-50 transition"
+                  className="px-4 py-2.5 bg-brand-600 text-white rounded-lg font-medium hover:bg-brand-700 disabled:opacity-50 transition"
                 >
                   {searchLoading ? "..." : "Search"}
                 </button>
               </div>
 
               {/* Search Results */}
+              {searchPerformed && searchResults.length === 0 && (
+                <div className="mt-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-sm font-medium text-slate-900">Search Results</h3>
+                    <button onClick={() => setSearchPerformed(false)} className="text-xs text-slate-500 hover:text-slate-700">Clear</button>
+                  </div>
+                  <p className="text-sm text-slate-500">No matching content found for "{searchQuery}". Try a different search term.</p>
+                </div>
+              )}
               {searchResults.length > 0 && (
                 <div className="mt-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-sm font-medium text-slate-900">Search Results ({searchResults.length})</h3>
-                    <button onClick={() => setSearchResults([])} className="text-xs text-slate-500 hover:text-slate-700">Clear</button>
+                    <button onClick={() => { setSearchResults([]); setSearchPerformed(false); }} className="text-xs text-slate-500 hover:text-slate-700">Clear</button>
                   </div>
                   <div className="space-y-2 max-h-60 overflow-y-auto">
                     {searchResults.map((result, i) => (
@@ -759,7 +779,7 @@ export default function DashboardPage() {
             <div className="p-6">
               {docsLoading && documents.length === 0 ? (
                 <div className="flex justify-center py-16">
-                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary-600"></div>
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-brand-600"></div>
                 </div>
               ) : documents.length === 0 ? (
                 <div className="text-center py-16 text-slate-500">
@@ -855,7 +875,7 @@ export default function DashboardPage() {
                         type="text"
                         value={docName}
                         onChange={(e) => setDocName(e.target.value)}
-                        className="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+                        className="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none"
                         placeholder="e.g., Services FAQ"
                         required
                       />
@@ -865,7 +885,7 @@ export default function DashboardPage() {
                       <textarea
                         value={docContent}
                         onChange={(e) => setDocContent(e.target.value)}
-                        className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none h-48 resize-none"
+                        className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none h-48 resize-none"
                         placeholder="Enter the document content that the AI will use to answer questions..."
                         required
                       />
@@ -886,7 +906,7 @@ export default function DashboardPage() {
                       <button
                         type="submit"
                         disabled={docLoading}
-                        className="flex-1 px-4 py-2.5 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 disabled:opacity-50 transition"
+                        className="flex-1 px-4 py-2.5 bg-brand-600 text-white rounded-lg font-medium hover:bg-brand-700 disabled:opacity-50 transition"
                       >
                         {docLoading ? "Creating..." : "Create Document"}
                       </button>
@@ -924,7 +944,7 @@ export default function DashboardPage() {
                         type="url"
                         value={docUrl}
                         onChange={(e) => setDocUrl(e.target.value)}
-                        className="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+                        className="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none"
                         placeholder="https://example.com/page"
                         disabled={importingUrl}
                       />
@@ -957,7 +977,7 @@ export default function DashboardPage() {
                         type="button"
                         disabled={!docUrl.trim() || importingUrl}
                         onClick={handleUrlImport}
-                        className="flex-1 px-4 py-2.5 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 disabled:opacity-50 transition"
+                        className="flex-1 px-4 py-2.5 bg-brand-600 text-white rounded-lg font-medium hover:bg-brand-700 disabled:opacity-50 transition"
                       >
                         {importingUrl ? (
                           <span className="flex items-center justify-center gap-2">
@@ -1003,7 +1023,7 @@ export default function DashboardPage() {
                       onDrop={handleDrop}
                       className={`relative border-2 border-dashed rounded-xl p-8 text-center transition ${
                         dragActive
-                          ? "border-primary-500 bg-primary-50"
+                          ? "border-brand-500 bg-brand-50"
                           : "border-slate-300 hover:border-slate-400"
                       }`}
                     >
@@ -1018,7 +1038,7 @@ export default function DashboardPage() {
                       <div className="flex flex-col items-center">
                         {uploadingFile ? (
                           <>
-                            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600 mb-4"></div>
+                            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-600 mb-4"></div>
                             <p className="text-sm font-medium text-slate-900">Uploading...</p>
                           </>
                         ) : (
@@ -1076,7 +1096,7 @@ export default function DashboardPage() {
                 <button
                   onClick={loadCalls}
                   disabled={callsLoading}
-                  className="inline-flex items-center gap-2 text-sm text-primary-600 hover:text-primary-700 font-medium disabled:opacity-50"
+                  className="inline-flex items-center gap-2 text-sm text-brand-600 hover:text-brand-700 font-medium disabled:opacity-50"
                 >
                   <svg className={`w-4 h-4 ${callsLoading ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -1087,7 +1107,7 @@ export default function DashboardPage() {
 
               {callsLoading && calls.length === 0 ? (
                 <div className="flex justify-center py-16">
-                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary-600"></div>
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-brand-600"></div>
                 </div>
               ) : calls.length === 0 ? (
                 <div className="text-center py-16 text-slate-500">
@@ -1146,7 +1166,7 @@ export default function DashboardPage() {
                           key={call.id}
                           onClick={() => loadCallDetail(call.id)}
                           className={`hover:bg-slate-50 cursor-pointer transition ${
-                            selectedCall?.id === call.id ? "bg-primary-50" : ""
+                            selectedCall?.id === call.id ? "bg-brand-50" : ""
                           }`}
                         >
                           <td className="py-3.5">
@@ -1185,7 +1205,14 @@ export default function DashboardPage() {
                             {formatDate(call.started_at, true)}
                           </td>
                           <td className="py-3.5 text-sm text-slate-600 text-right font-mono">
-                            {formatDuration(call.duration_seconds)}
+                            <span className="inline-flex items-center gap-2">
+                              {call.recording_url && (
+                                <svg className="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" title="Recording available">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                                </svg>
+                              )}
+                              {formatDuration(call.duration_seconds)}
+                            </span>
                           </td>
                         </tr>
                       ))}
@@ -1199,7 +1226,7 @@ export default function DashboardPage() {
             <div className="xl:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
               {callDetailLoading ? (
                 <div className="flex justify-center py-20">
-                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary-600"></div>
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-brand-600"></div>
                 </div>
               ) : selectedCall ? (
                 <div>
@@ -1247,6 +1274,39 @@ export default function DashboardPage() {
                     </div>
                   </div>
 
+                  {/* Recording Player */}
+                  {selectedCall.recording_url && (
+                    <div className="mb-6">
+                      <h3 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                        <svg className="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                        </svg>
+                        Call Recording
+                      </h3>
+                      <div className="bg-slate-50 rounded-xl p-4">
+                        <audio
+                          controls
+                          className="w-full"
+                          src={selectedCall.recording_url}
+                        >
+                          Your browser does not support the audio element.
+                        </audio>
+                        <a
+                          href={selectedCall.recording_url}
+                          download
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-3 inline-flex items-center gap-2 text-sm text-brand-600 hover:text-brand-700 font-medium"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                          </svg>
+                          Download Recording
+                        </a>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Transcript */}
                   <h3 className="text-sm font-semibold text-slate-900 mb-3">Transcript</h3>
                   {selectedCall.transcripts.length === 0 ? (
@@ -1262,18 +1322,18 @@ export default function DashboardPage() {
                             className={`max-w-[85%] p-3 rounded-2xl ${
                               transcript.speaker === "caller"
                                 ? "bg-slate-100 text-slate-900 rounded-tl-sm"
-                                : "bg-primary-600 text-white rounded-tr-sm"
+                                : "bg-brand-600 text-white rounded-tr-sm"
                             }`}
                           >
                             <p className={`text-xs font-medium mb-1 ${
-                              transcript.speaker === "caller" ? "text-slate-500" : "text-primary-100"
+                              transcript.speaker === "caller" ? "text-slate-500" : "text-brand-100"
                             }`}>
                               {transcript.speaker === "caller" ? "Caller" : "Agent"}
                             </p>
                             <p className="text-sm">{transcript.text}</p>
                             {transcript.confidence !== null && (
                               <p className={`text-xs mt-1.5 ${
-                                transcript.speaker === "caller" ? "text-slate-400" : "text-primary-200"
+                                transcript.speaker === "caller" ? "text-slate-400" : "text-brand-200"
                               }`}>
                                 Confidence: {(transcript.confidence * 100).toFixed(0)}%
                               </p>

@@ -3,18 +3,20 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { api, AdminStats, AdminUser, AdminPhoneNumber, TwilioAvailableNumber } from "@/lib/api";
+import { api, AdminStats, AdminUser, AdminPhoneNumber, TwilioAvailableNumber, AdminModelsResponse, ProviderModels } from "@/lib/api";
 
 export default function AdminPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [activeTab, setActiveTab] = useState<"overview" | "users" | "numbers">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "users" | "numbers" | "models">("overview");
 
   // Data
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [phoneNumbers, setPhoneNumbers] = useState<AdminPhoneNumber[]>([]);
+  const [modelsData, setModelsData] = useState<AdminModelsResponse | null>(null);
+  const [togglingModel, setTogglingModel] = useState<string | null>(null);
 
   // Add number form
   const [newNumber, setNewNumber] = useState("");
@@ -66,14 +68,16 @@ export default function AdminPage() {
 
   const loadData = async () => {
     try {
-      const [statsData, usersData, numbersData] = await Promise.all([
+      const [statsData, usersData, numbersData, models] = await Promise.all([
         api.getAdminStats(),
         api.getAdminUsers(),
         api.getAdminPhoneNumbers(),
+        api.getAdminModels(),
       ]);
       setStats(statsData);
       setUsers(usersData);
       setPhoneNumbers(numbersData);
+      setModelsData(models);
     } catch (err) {
       console.error("Failed to load admin data", err);
     }
@@ -199,10 +203,37 @@ export default function AdminPage() {
     }
   };
 
+  const handleToggleModel = async (provider: string, modelId: string, currentEnabled: boolean) => {
+    setTogglingModel(`${provider}-${modelId}`);
+    try {
+      await api.toggleModel(provider, modelId, !currentEnabled);
+      // Update local state optimistically
+      setModelsData(prev => {
+        if (!prev) return prev;
+        return {
+          providers: prev.providers.map(p => {
+            if (p.provider !== provider) return p;
+            return {
+              ...p,
+              models: p.models.map(m => {
+                if (m.id !== modelId) return m;
+                return { ...m, enabled: !currentEnabled };
+              })
+            };
+          })
+        };
+      });
+    } catch (err: any) {
+      alert(err.message || "Failed to toggle model");
+    } finally {
+      setTogglingModel(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-900">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-500"></div>
       </div>
     );
   }
@@ -217,7 +248,7 @@ export default function AdminPage() {
       <header className="bg-gray-800 border-b border-gray-700">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-brand-500 rounded-lg flex items-center justify-center">
               <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
               </svg>
@@ -236,17 +267,17 @@ export default function AdminPage() {
       {/* Tabs */}
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex gap-4 border-b border-gray-700 mt-4">
-          {(["overview", "users", "numbers"] as const).map((tab) => (
+          {(["overview", "users", "numbers", "models"] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={`px-4 py-3 font-medium capitalize transition border-b-2 -mb-px ${
                 activeTab === tab
-                  ? "text-orange-500 border-orange-500"
+                  ? "text-brand-500 border-brand-500"
                   : "text-gray-400 border-transparent hover:text-white"
               }`}
             >
-              {tab === "numbers" ? "Phone Numbers" : tab}
+              {tab === "numbers" ? "Phone Numbers" : tab === "models" ? "AI Models" : tab}
             </button>
           ))}
         </div>
@@ -288,7 +319,7 @@ export default function AdminPage() {
                       <div className="flex items-center gap-2">
                         <span className="text-white">{user.email}</span>
                         {user.is_admin && (
-                          <span className="px-2 py-0.5 bg-orange-500/20 text-orange-400 text-xs rounded">Admin</span>
+                          <span className="px-2 py-0.5 bg-brand-500/20 text-brand-400 text-xs rounded">Admin</span>
                         )}
                       </div>
                     </td>
@@ -327,7 +358,7 @@ export default function AdminPage() {
                 <select
                   value={twilioCountry}
                   onChange={(e) => setTwilioCountry(e.target.value)}
-                  className="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-orange-500 focus:outline-none"
+                  className="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-brand-500 focus:outline-none"
                 >
                   <option value="AU">Australia</option>
                   <option value="US">United States</option>
@@ -339,12 +370,12 @@ export default function AdminPage() {
                   value={twilioAreaCode}
                   onChange={(e) => setTwilioAreaCode(e.target.value)}
                   placeholder="Area code (optional)"
-                  className="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:border-orange-500 focus:outline-none min-w-[120px]"
+                  className="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:border-brand-500 focus:outline-none min-w-[120px]"
                 />
                 <button
                   onClick={handleSearchTwilio}
                   disabled={twilioSearching}
-                  className="px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition disabled:opacity-50"
+                  className="px-6 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition disabled:opacity-50"
                 >
                   {twilioSearching ? "Searching..." : "Search All Types"}
                 </button>
@@ -452,7 +483,7 @@ export default function AdminPage() {
                   value={newNumber}
                   onChange={(e) => setNewNumber(e.target.value)}
                   placeholder="Add number (+14155551234)"
-                  className="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:border-orange-500 focus:outline-none"
+                  className="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:border-brand-500 focus:outline-none"
                 />
                 <button
                   type="submit"
@@ -471,7 +502,7 @@ export default function AdminPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search your numbers..."
-                className="w-full px-4 py-3 pl-10 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-orange-500 focus:outline-none"
+                className="w-full px-4 py-3 pl-10 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:border-brand-500 focus:outline-none"
               />
               <svg className="absolute left-3 top-3.5 w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -556,6 +587,63 @@ export default function AdminPage() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Models Tab */}
+        {activeTab === "models" && modelsData && (
+          <div className="space-y-6">
+            <div className="bg-gray-800 rounded-xl p-6">
+              <p className="text-gray-400 mb-4">
+                Control which AI models are available to all users. Disabled models will not appear in user settings.
+              </p>
+            </div>
+
+            {modelsData.providers.map((provider) => (
+              <div key={provider.provider} className="bg-gray-800 rounded-xl overflow-hidden">
+                <div className="px-6 py-4 bg-gray-700 border-b border-gray-600">
+                  <h3 className="text-lg font-semibold capitalize flex items-center gap-2">
+                    {provider.provider === "openai" ? (
+                      <span className="w-8 h-8 bg-green-500/20 rounded-lg flex items-center justify-center text-green-400">
+                        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1686a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4944zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1685a.0757.0757 0 0 1-.071 0l-4.8303-2.7865A4.504 4.504 0 0 1 2.3408 7.8956zm16.5963 3.8558L13.1038 8.364 15.1192 7.2a.0757.0757 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.407-.667zm2.0107-3.0231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L9.409 9.2297V6.8974a.0662.0662 0 0 1 .0284-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.6802 4.66zM8.3065 12.863l-2.02-1.1638a.0804.0804 0 0 1-.038-.0567V6.0742a4.4992 4.4992 0 0 1 7.3757-3.4537l-.142.0805L8.704 5.459a.7948.7948 0 0 0-.3927.6813zm1.0976-2.3654l2.602-1.4998 2.6069 1.4998v2.9994l-2.5974 1.4997-2.6067-1.4997Z"/>
+                        </svg>
+                      </span>
+                    ) : (
+                      <span className="w-8 h-8 bg-brand-500/20 rounded-lg flex items-center justify-center text-brand-400">
+                        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                        </svg>
+                      </span>
+                    )}
+                    {provider.provider === "openai" ? "OpenAI" : "Anthropic"}
+                  </h3>
+                </div>
+                <div className="divide-y divide-gray-700">
+                  {provider.models.map((model) => (
+                    <div key={model.id} className="px-6 py-4 flex items-center justify-between hover:bg-gray-750">
+                      <div>
+                        <p className="text-white font-medium">{model.name}</p>
+                        <p className="text-sm text-gray-500 font-mono">{model.id}</p>
+                      </div>
+                      <button
+                        onClick={() => handleToggleModel(provider.provider, model.id, model.enabled)}
+                        disabled={togglingModel === `${provider.provider}-${model.id}`}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 focus:ring-offset-gray-800 disabled:opacity-50 ${
+                          model.enabled ? "bg-brand-500" : "bg-gray-600"
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                            model.enabled ? "translate-x-6" : "translate-x-1"
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </main>
