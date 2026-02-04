@@ -12,7 +12,7 @@ export default function SignupPage() {
     email: "",
     password: "",
     fullName: "",
-    tenantName: "",
+    organizationName: "",
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -27,7 +27,7 @@ export default function SignupPage() {
         formData.email,
         formData.password,
         formData.fullName,
-        formData.tenantName
+        formData.organizationName
       );
       api.setToken(response.access_token);
       router.push("/dashboard");
@@ -110,11 +110,12 @@ export default function SignupPage() {
               </label>
               <input
                 type="text"
-                value={formData.tenantName}
-                onChange={(e) => setFormData({ ...formData, tenantName: e.target.value })}
+                value={formData.organizationName}
+                onChange={(e) => setFormData({ ...formData, organizationName: e.target.value })}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-none transition"
                 placeholder="My Clinic"
                 required
+                minLength={2}
               />
             </div>
 

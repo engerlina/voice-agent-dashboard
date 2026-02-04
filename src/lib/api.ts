@@ -6,11 +6,21 @@ export interface AuthResponse {
   token_type: string;
 }
 
+export interface TenantInfo {
+  id: string;
+  name: string;
+  slug: string;
+  role: 'super_admin' | 'admin' | 'user';
+}
+
 export interface User {
   id: string;
   email: string;
   full_name: string | null;
   is_active: boolean;
+  is_admin: boolean;
+  current_tenant: TenantInfo | null;
+  tenants: TenantInfo[];
 }
 
 export interface VoiceStatus {
@@ -229,14 +239,14 @@ class ApiClient {
   }
 
   // Auth
-  async signup(email: string, password: string, fullName: string, tenantName: string): Promise<AuthResponse> {
+  async signup(email: string, password: string, fullName: string, organizationName: string): Promise<AuthResponse> {
     return this.fetch('/api/v1/auth/signup', {
       method: 'POST',
       body: JSON.stringify({
         email,
         password,
         full_name: fullName,
-        tenant_name: tenantName,
+        organization_name: organizationName,
       }),
     });
   }
