@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { api, User, VoiceStatus, MyPhoneNumber, AvailablePhoneNumber, Call, CallDetail } from "@/lib/api";
 
 type SortField = "started_at" | "caller_number" | "direction" | "status" | "duration_seconds";
@@ -363,12 +364,14 @@ export default function DashboardPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 bg-gradient-to-br from-brand-500 to-brand-700 rounded-lg flex items-center justify-center shadow-sm">
-                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                </svg>
-              </div>
-              <h1 className="text-lg font-semibold text-slate-900">Voice Agent</h1>
+              <Image
+                src="/android-chrome-192x192.png"
+                alt="VoxxCalls Logo"
+                width={36}
+                height={36}
+                className="rounded-lg"
+              />
+              <h1 className="text-lg font-semibold text-slate-900">VoxxCalls</h1>
             </div>
             <div className="flex items-center gap-6">
               <span className="text-sm text-slate-500">{user?.email}</span>
@@ -425,7 +428,7 @@ export default function DashboardPage() {
                 <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2"></div>
                 <div className="relative flex items-center justify-between">
                   <div>
-                    <p className="text-brand-200 text-sm font-medium uppercase tracking-wide">Your Voice Agent</p>
+                    <p className="text-brand-200 text-sm font-medium uppercase tracking-wide">Your VoxxCalls</p>
                     <p className="text-4xl font-bold mt-2 tracking-tight">{myPhoneNumber.number}</p>
                     <p className="text-brand-200 text-sm mt-3">
                       {myPhoneNumber.webhook_configured
@@ -489,7 +492,7 @@ export default function DashboardPage() {
               <div className="bg-gradient-to-br from-slate-700 to-slate-800 rounded-2xl shadow-lg p-8 text-white">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-slate-400 text-sm font-medium uppercase tracking-wide">Your Voice Agent</p>
+                    <p className="text-slate-400 text-sm font-medium uppercase tracking-wide">Your VoxxCalls</p>
                     <p className="text-2xl font-medium mt-2 text-slate-300">No number selected</p>
                     <p className="text-slate-400 text-sm mt-3">
                       Select a phone number to start receiving calls
@@ -659,7 +662,7 @@ export default function DashboardPage() {
                           <td className="py-3 text-sm text-slate-600 text-right font-mono">
                             <span className="inline-flex items-center gap-2">
                               {call.recording_url && (
-                                <svg className="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" title="Recording available">
+                                <svg className="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
                                 </svg>
                               )}
@@ -1207,7 +1210,7 @@ export default function DashboardPage() {
                           <td className="py-3.5 text-sm text-slate-600 text-right font-mono">
                             <span className="inline-flex items-center gap-2">
                               {call.recording_url && (
-                                <svg className="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" title="Recording available">
+                                <svg className="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
                                 </svg>
                               )}

@@ -5,7 +5,7 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Voice Agent Dashboard",
+  title: "VoxxCalls",
   description: "Manage your voice AI agent and conversations",
   icons: {
     icon: [

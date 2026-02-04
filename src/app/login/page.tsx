@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { api } from "@/lib/api";
 
 export default function LoginPage() {
@@ -33,12 +34,14 @@ export default function LoginPage() {
       <div className="max-w-md w-full">
         <div className="bg-white rounded-2xl shadow-xl p-8">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-brand-100 rounded-full mb-4">
-              <svg className="w-8 h-8 text-brand-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-              </svg>
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900">Voice Agent</h1>
+            <Image
+              src="/android-chrome-192x192.png"
+              alt="VoxxCalls Logo"
+              width={80}
+              height={80}
+              className="mx-auto mb-4"
+            />
+            <h1 className="text-2xl font-bold text-gray-900">VoxxCalls</h1>
             <p className="text-gray-600 mt-2">Sign in to your account</p>
           </div>
 

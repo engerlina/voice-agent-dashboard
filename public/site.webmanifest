@@ -1,6 +1,6 @@
 {
-  "name": "Voice Agent Dashboard",
-  "short_name": "VoiceAgent",
+  "name": "VoxxCalls",
+  "short_name": "VoxxCalls",
   "icons": [
     {
       "src": "/android-chrome-192x192.png",
