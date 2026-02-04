@@ -152,6 +152,48 @@ export interface AdminModelsResponse {
   providers: ProviderModels[];
 }
 
+// Invitation types
+export interface Invitation {
+  id: string;
+  email: string;
+  role: 'admin' | 'user';
+  status: 'pending' | 'accepted' | 'expired' | 'revoked';
+  expires_at: string;
+  created_at: string;
+  invited_by: {
+    id: string;
+    email: string;
+    full_name: string | null;
+  };
+}
+
+export interface InviteRequest {
+  email: string;
+  role: 'admin' | 'user';
+}
+
+export interface InviteValidation {
+  valid: boolean;
+  email: string;
+  tenant_name: string;
+  role: string;
+  expires_at: string;
+  invited_by: string;
+}
+
+export interface TeamMember {
+  id: string;
+  email: string;
+  full_name: string | null;
+  role: 'admin' | 'user';
+  joined_at: string;
+  invited_by: {
+    id: string;
+    email: string;
+    full_name: string | null;
+  } | null;
+}
+
 // Call types
 export interface CallTranscript {
   speaker: string;
@@ -239,7 +281,13 @@ class ApiClient {
   }
 
   // Auth
-  async signup(email: string, password: string, fullName: string, organizationName: string): Promise<AuthResponse> {
+  async signup(
+    email: string,
+    password: string,
+    fullName: string,
+    organizationName?: string,
+    inviteToken?: string
+  ): Promise<AuthResponse> {
     return this.fetch('/api/v1/auth/signup', {
       method: 'POST',
       body: JSON.stringify({
@@ -247,6 +295,7 @@ class ApiClient {
         password,
         full_name: fullName,
         organization_name: organizationName,
+        invite_token: inviteToken,
       }),
     });
   }
@@ -462,6 +511,39 @@ class ApiClient {
 
   async getCall(callId: string): Promise<CallDetail> {
     return this.fetch(`/api/v1/calls/${callId}`);
+  }
+
+  // Invitations
+  async createInvitation(data: InviteRequest): Promise<Invitation> {
+    return this.fetch('/api/v1/invitations', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async listInvitations(): Promise<Invitation[]> {
+    return this.fetch('/api/v1/invitations');
+  }
+
+  async revokeInvitation(invitationId: string): Promise<void> {
+    return this.fetch(`/api/v1/invitations/${invitationId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async resendInvitation(invitationId: string): Promise<{ message: string }> {
+    return this.fetch(`/api/v1/invitations/${invitationId}/resend`, {
+      method: 'POST',
+    });
+  }
+
+  async validateInviteToken(token: string): Promise<InviteValidation> {
+    return this.fetch(`/api/v1/invitations/validate/${token}`);
+  }
+
+  // Team Members
+  async getTeamMembers(): Promise<TeamMember[]> {
+    return this.fetch('/api/v1/invitations/members');
   }
 }
 

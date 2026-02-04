@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { api, User, VoiceStatus, MyPhoneNumber, AvailablePhoneNumber, Call, CallDetail } from "@/lib/api";
+import { api, User, VoiceStatus, MyPhoneNumber, AvailablePhoneNumber, Call, CallDetail, Invitation, TeamMember } from "@/lib/api";
 
 type SortField = "started_at" | "caller_number" | "direction" | "status" | "duration_seconds";
 type SortDirection = "asc" | "desc";
@@ -14,7 +14,7 @@ export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null);
   const [voiceStatus, setVoiceStatus] = useState<VoiceStatus | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"overview" | "documents" | "calls">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "documents" | "calls" | "team">("overview");
   const [isAdmin, setIsAdmin] = useState(false);
 
   // Phone number state
@@ -56,6 +56,16 @@ export default function DashboardPage() {
   const [sortField, setSortField] = useState<SortField>("started_at");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
+  // Team state
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [invitations, setInvitations] = useState<Invitation[]>([]);
+  const [teamLoading, setTeamLoading] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<"admin" | "user">("user");
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [inviteError, setInviteError] = useState("");
+
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -92,6 +102,13 @@ export default function DashboardPage() {
   useEffect(() => {
     if (activeTab === "documents" && documents.length === 0) {
       loadDocuments();
+    }
+  }, [activeTab]);
+
+  // Load team data when switching to team tab
+  useEffect(() => {
+    if (activeTab === "team" && teamMembers.length === 0) {
+      loadTeamData();
     }
   }, [activeTab]);
 
@@ -291,6 +308,60 @@ export default function DashboardPage() {
     }
   };
 
+  const loadTeamData = async () => {
+    setTeamLoading(true);
+    try {
+      const [members, invites] = await Promise.all([
+        api.getTeamMembers(),
+        api.listInvitations(),
+      ]);
+      setTeamMembers(members);
+      setInvitations(invites);
+    } catch (err) {
+      console.error("Failed to load team data", err);
+    } finally {
+      setTeamLoading(false);
+    }
+  };
+
+  const handleInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setInviteLoading(true);
+    setInviteError("");
+
+    try {
+      await api.createInvitation({ email: inviteEmail, role: inviteRole });
+      setShowInviteModal(false);
+      setInviteEmail("");
+      setInviteRole("user");
+      loadTeamData();
+    } catch (err) {
+      setInviteError(err instanceof Error ? err.message : "Failed to send invitation");
+    } finally {
+      setInviteLoading(false);
+    }
+  };
+
+  const handleRevokeInvitation = async (invitationId: string) => {
+    if (!confirm("Are you sure you want to revoke this invitation?")) return;
+    try {
+      await api.revokeInvitation(invitationId);
+      setInvitations(invitations.filter(i => i.id !== invitationId));
+    } catch (err) {
+      console.error("Failed to revoke invitation", err);
+    }
+  };
+
+  const handleResendInvitation = async (invitationId: string) => {
+    try {
+      await api.resendInvitation(invitationId);
+      alert("Invitation resent successfully");
+    } catch (err) {
+      console.error("Failed to resend invitation", err);
+      alert("Failed to resend invitation");
+    }
+  };
+
   // Sorting logic
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -403,7 +474,7 @@ export default function DashboardPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Tabs */}
         <div className="flex gap-1 mb-8 bg-slate-100 p-1 rounded-lg w-fit">
-          {["overview", "documents", "calls"].map((tab) => (
+          {["overview", "documents", "calls", "team"].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab as any)}
@@ -1356,6 +1427,258 @@ export default function DashboardPage() {
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {/* Team Tab */}
+        {activeTab === "team" && (
+          <div className="space-y-6">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-xl font-semibold text-slate-900">Team Members</h1>
+                <p className="text-sm text-slate-500 mt-1">
+                  Manage your organization&apos;s team members and invitations
+                </p>
+              </div>
+              {user?.current_tenant?.role === "admin" && (
+                <button
+                  onClick={() => setShowInviteModal(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-brand-600 text-white rounded-lg font-medium hover:bg-brand-700 transition"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  Invite Member
+                </button>
+              )}
+            </div>
+
+            {/* Team Members Table */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+              <h2 className="text-base font-semibold text-slate-900 mb-5">Members</h2>
+
+              {teamLoading && teamMembers.length === 0 ? (
+                <div className="flex justify-center py-16">
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-brand-600"></div>
+                </div>
+              ) : teamMembers.length === 0 ? (
+                <div className="text-center py-12 text-slate-500">
+                  <svg className="w-12 h-12 mx-auto mb-4 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                  <p>No team members yet.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="text-left text-xs text-slate-500 uppercase tracking-wide border-b border-slate-200">
+                        <th className="pb-3 font-medium">Member</th>
+                        <th className="pb-3 font-medium">Role</th>
+                        <th className="pb-3 font-medium">Joined</th>
+                        <th className="pb-3 font-medium">Invited By</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {teamMembers.map((member) => (
+                        <tr key={member.id} className="hover:bg-slate-50">
+                          <td className="py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-brand-100 rounded-full flex items-center justify-center">
+                                <span className="text-brand-700 font-medium">
+                                  {(member.full_name || member.email)[0].toUpperCase()}
+                                </span>
+                              </div>
+                              <div>
+                                <p className="font-medium text-slate-900">{member.full_name || "No name"}</p>
+                                <p className="text-sm text-slate-500">{member.email}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-4">
+                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+                              member.role === "admin"
+                                ? "bg-purple-100 text-purple-700"
+                                : "bg-slate-100 text-slate-700"
+                            }`}>
+                              {member.role === "admin" ? "Admin" : "Member"}
+                            </span>
+                          </td>
+                          <td className="py-4 text-sm text-slate-600">
+                            {new Date(member.joined_at).toLocaleDateString(undefined, {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            })}
+                          </td>
+                          <td className="py-4 text-sm text-slate-500">
+                            {member.invited_by ? member.invited_by.email : "Organization creator"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* Pending Invitations */}
+            {user?.current_tenant?.role === "admin" && (
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                <div className="flex items-center justify-between mb-5">
+                  <h2 className="text-base font-semibold text-slate-900">Pending Invitations</h2>
+                  <button
+                    onClick={loadTeamData}
+                    disabled={teamLoading}
+                    className="text-sm text-brand-600 hover:text-brand-700 font-medium disabled:opacity-50"
+                  >
+                    Refresh
+                  </button>
+                </div>
+
+                {invitations.length === 0 ? (
+                  <div className="text-center py-8 text-slate-500">
+                    <p className="text-sm">No pending invitations</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {invitations.map((invitation) => (
+                      <div
+                        key={invitation.id}
+                        className="flex items-center justify-between p-4 bg-slate-50 rounded-xl"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
+                            <svg className="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            </svg>
+                          </div>
+                          <div>
+                            <p className="font-medium text-slate-900">{invitation.email}</p>
+                            <p className="text-xs text-slate-500">
+                              Invited as {invitation.role === "admin" ? "Admin" : "Member"} • Expires{" "}
+                              {new Date(invitation.expires_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleResendInvitation(invitation.id)}
+                            className="px-3 py-1.5 text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-200 rounded-lg transition"
+                          >
+                            Resend
+                          </button>
+                          <button
+                            onClick={() => handleRevokeInvitation(invitation.id)}
+                            className="px-3 py-1.5 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition"
+                          >
+                            Revoke
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Invite Modal */}
+            {showInviteModal && (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+                  <div className="p-6 border-b border-slate-200">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-lg font-semibold text-slate-900">Invite Team Member</h2>
+                      <button
+                        onClick={() => {
+                          setShowInviteModal(false);
+                          setInviteError("");
+                          setInviteEmail("");
+                        }}
+                        className="p-2 hover:bg-slate-100 rounded-lg"
+                      >
+                        <svg className="w-5 h-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                  <form onSubmit={handleInvite} className="p-6 space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5">Email Address</label>
+                      <input
+                        type="email"
+                        value={inviteEmail}
+                        onChange={(e) => setInviteEmail(e.target.value)}
+                        className="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none"
+                        placeholder="colleague@example.com"
+                        required
+                        disabled={inviteLoading}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5">Role</label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setInviteRole("user")}
+                          className={`p-3 rounded-lg border-2 text-left transition ${
+                            inviteRole === "user"
+                              ? "border-brand-500 bg-brand-50"
+                              : "border-slate-200 hover:border-slate-300"
+                          }`}
+                        >
+                          <p className="font-medium text-slate-900">Member</p>
+                          <p className="text-xs text-slate-500 mt-0.5">Can view and use features</p>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setInviteRole("admin")}
+                          className={`p-3 rounded-lg border-2 text-left transition ${
+                            inviteRole === "admin"
+                              ? "border-brand-500 bg-brand-50"
+                              : "border-slate-200 hover:border-slate-300"
+                          }`}
+                        >
+                          <p className="font-medium text-slate-900">Admin</p>
+                          <p className="text-xs text-slate-500 mt-0.5">Full access & settings</p>
+                        </button>
+                      </div>
+                    </div>
+                    {inviteError && (
+                      <p className="text-sm text-red-600 flex items-center gap-2">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        {inviteError}
+                      </p>
+                    )}
+                    <div className="flex gap-3 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowInviteModal(false);
+                          setInviteError("");
+                          setInviteEmail("");
+                        }}
+                        disabled={inviteLoading}
+                        className="flex-1 px-4 py-2.5 border border-slate-200 rounded-lg font-medium text-slate-700 hover:bg-slate-50 transition disabled:opacity-50"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={inviteLoading || !inviteEmail.trim()}
+                        className="flex-1 px-4 py-2.5 bg-brand-600 text-white rounded-lg font-medium hover:bg-brand-700 disabled:opacity-50 transition"
+                      >
+                        {inviteLoading ? "Sending..." : "Send Invitation"}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </main>
