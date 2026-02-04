@@ -262,12 +262,13 @@ export default function SettingsPage() {
           <p className="text-sm text-gray-500 mb-4">Configure language support for your voice agent.</p>
 
           <div className="space-y-4">
-            <label className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
               <div>
                 <span className="font-medium text-gray-900">Auto-Detect Language</span>
                 <p className="text-sm text-gray-500">Automatically detect and respond in the caller's language.</p>
               </div>
               <button
+                type="button"
                 onClick={() => {
                   console.log("Toggle clicked, current value:", settings?.auto_detect_language, "new value:", settings?.auto_detect_language === true ? false : true);
                   if (!saving) {
@@ -287,7 +288,7 @@ export default function SettingsPage() {
                   }`}
                 />
               </button>
-            </label>
+            </div>
 
             {settings?.auto_detect_language !== true && (
               <div>
