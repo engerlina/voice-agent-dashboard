@@ -174,11 +174,11 @@ export interface InviteRequest {
 
 export interface InviteValidation {
   valid: boolean;
-  email: string;
-  tenant_name: string;
-  role: string;
-  expires_at: string;
-  invited_by: string;
+  email?: string;
+  tenant_name?: string;
+  role?: string;
+  expires_at?: string;
+  invited_by?: string;
 }
 
 export interface TeamMember {
