@@ -68,16 +68,24 @@ export default function AdminPage() {
 
   const loadData = async () => {
     try {
-      const [statsData, usersData, numbersData, models] = await Promise.all([
+      // Load core admin data first
+      const [statsData, usersData, numbersData] = await Promise.all([
         api.getAdminStats(),
         api.getAdminUsers(),
         api.getAdminPhoneNumbers(),
-        api.getAdminModels(),
       ]);
       setStats(statsData);
       setUsers(usersData);
       setPhoneNumbers(numbersData);
-      setModelsData(models);
+
+      // Load models separately (may not be deployed yet)
+      try {
+        const models = await api.getAdminModels();
+        setModelsData(models);
+      } catch (modelsErr) {
+        console.warn("Models endpoint not available yet", modelsErr);
+        setModelsData(null);
+      }
     } catch (err) {
       console.error("Failed to load admin data", err);
     }
@@ -591,6 +599,19 @@ export default function AdminPage() {
         )}
 
         {/* Models Tab */}
+        {activeTab === "models" && !modelsData && (
+          <div className="bg-gray-800 rounded-xl p-6 text-center">
+            <div className="w-12 h-12 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-6 h-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-medium text-white mb-2">AI Models Management</h3>
+            <p className="text-gray-400">
+              This feature requires the latest backend deployment. Please deploy the backend to enable model management.
+            </p>
+          </div>
+        )}
         {activeTab === "models" && modelsData && (
           <div className="space-y-6">
             <div className="bg-gray-800 rounded-xl p-6">

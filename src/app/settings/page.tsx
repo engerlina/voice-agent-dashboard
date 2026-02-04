@@ -263,20 +263,25 @@ export default function SettingsPage() {
               </div>
               <button
                 type="button"
-                onClick={() => {
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  console.log("Toggle clicked! saving:", saving, "current value:", settings?.auto_detect_language);
                   if (!saving) {
-                    handleSave({ auto_detect_language: settings?.auto_detect_language === true ? false : true });
+                    const newValue = settings?.auto_detect_language === true ? false : true;
+                    console.log("Calling handleSave with auto_detect_language:", newValue);
+                    handleSave({ auto_detect_language: newValue });
                   }
                 }}
                 disabled={saving}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
                   saving ? "opacity-50 cursor-not-allowed" : ""
                 } ${
                   settings?.auto_detect_language === true ? "bg-brand-600" : "bg-gray-300"
                 }`}
               >
                 <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform pointer-events-none ${
                     settings?.auto_detect_language === true ? "translate-x-6" : "translate-x-1"
                   }`}
                 />
