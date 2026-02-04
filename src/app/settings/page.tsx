@@ -23,6 +23,8 @@ export default function SettingsPage() {
 
     Promise.all([api.getSettings(), api.getAvailableModels()])
       .then(([settingsData, modelsData]) => {
+        console.log("Initial settings from API:", settingsData);
+        console.log("auto_detect_language on load:", settingsData?.auto_detect_language);
         setSettings(settingsData);
         setModels(modelsData);
       })
@@ -38,18 +40,24 @@ export default function SettingsPage() {
   }, [router]);
 
   const handleSave = async (updates: Record<string, any>) => {
+    console.log("handleSave starting with updates:", updates);
     setSaving(true);
     setError("");
     setSuccess("");
 
     try {
+      console.log("Calling api.updateSettings...");
       const updatedSettings = await api.updateSettings(updates);
+      console.log("API returned updatedSettings:", updatedSettings);
+      console.log("auto_detect_language in response:", updatedSettings?.auto_detect_language);
       setSettings(updatedSettings);
       setSuccess("Settings saved!");
       setTimeout(() => setSuccess(""), 2000);
     } catch (err) {
+      console.error("handleSave error:", err);
       setError(err instanceof Error ? err.message : "Failed to save settings");
     } finally {
+      console.log("handleSave finished, setSaving(false)");
       setSaving(false);
     }
   };
